@@ -4,6 +4,10 @@
 
 **DataCleaner-Pro** is an advanced AI-powered data cleaning and analysis platform. Designed for data scientists, analysts, and professionals working with data, this application provides powerful tools to transform raw datasets into actionable insights.
 
+<img width="1342" height="914" alt="image" src="https://github.com/user-attachments/assets/885d425c-460a-496a-8f57-8eb77313e5a3" />
+
+
+
 ### 🎯 Objectives
 
 * Automate the data cleaning process
