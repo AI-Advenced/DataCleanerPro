@@ -1,0 +1,1216 @@
+{% extends "base.html" %}
+
+{% block title %}Paramètres - DataCleaner Pro{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">
+        <i class="fas fa-cog me-2"></i>
+        Paramètres
+    </h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <div class="btn-group me-2">
+            <button class="btn btn-sm btn-success" id="saveAllBtn">
+                <i class="fas fa-save"></i> Sauvegarder Tout
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Navigation par onglets -->
+<ul class="nav nav-tabs" id="settingsTabs" role="tablist">
+    <li class="nav-item" role="presentation">
+        <button class="nav-link active" id="general-tab" data-bs-toggle="tab" data-bs-target="#general" type="button">
+            <i class="fas fa-cog me-2"></i>Général
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="data-tab" data-bs-toggle="tab" data-bs-target="#data" type="button">
+            <i class="fas fa-database me-2"></i>Données
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="ml-tab" data-bs-toggle="tab" data-bs-target="#ml" type="button">
+            <i class="fas fa-brain me-2"></i>Machine Learning
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="notifications-tab" data-bs-toggle="tab" data-bs-target="#notifications" type="button">
+            <i class="fas fa-bell me-2"></i>Notifications
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="security-tab" data-bs-toggle="tab" data-bs-target="#security" type="button">
+            <i class="fas fa-shield-alt me-2"></i>Sécurité
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="advanced-tab" data-bs-toggle="tab" data-bs-target="#advanced" type="button">
+            <i class="fas fa-wrench me-2"></i>Avancé
+        </button>
+    </li>
+</ul>
+
+<div class="tab-content" id="settingsTabContent">
+    <!-- Onglet Général -->
+    <div class="tab-pane fade show active" id="general" role="tabpanel">
+        <div class="row mt-4">
+            <div class="col-lg-8">
+                <div class="card shadow">
+                    <div class="card-header">
+                        <h6 class="m-0 font-weight-bold text-primary">
+                            <i class="fas fa-user me-2"></i>
+                            Préférences Générales
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <form id="generalForm">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label class="form-label">Langue de l'Interface</label>
+                                        <select class="form-select" id="interfaceLanguage">
+                                            <option value="fr" selected>Français</option>
+                                            <option value="en">English</option>
+                                            <option value="es">Español</option>
+                                            <option value="de">Deutsch</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label class="form-label">Fuseau Horaire</label>
+                                        <select class="form-select" id="timezone">
+                                            <option value="Europe/Paris" selected>Europe/Paris (CET)</option>
+                                            <option value="UTC">UTC</option>
+                                            <option value="America/New_York">America/New_York (EST)</option>
+                                            <option value="Asia/Tokyo">Asia/Tokyo (JST)</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label class="form-label">Thème de l'Interface</label>
+                                        <select class="form-select" id="interfaceTheme">
+                                            <option value="light" selected>Clair</option>
+                                            <option value="dark">Sombre</option>
+                                            <option value="auto">Automatique</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label class="form-label">Format de Date</label>
+                                        <select class="form-select" id="dateFormat">
+                                            <option value="dd/mm/yyyy" selected>DD/MM/YYYY</option>
+                                            <option value="mm/dd/yyyy">MM/DD/YYYY</option>
+                                            <option value="yyyy-mm-dd">YYYY-MM-DD</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="autoSave" checked>
+                                    <label class="form-check-label" for="autoSave">
+                                        Sauvegarde automatique des préférences
+                                    </label>
+                                </div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="showTips" checked>
+                                    <label class="form-check-label" for="showTips">
+                                        Afficher les conseils et astuces
+                                    </label>
+                                </div>
+                            </div>
+                            
+                            <button type="button" class="btn btn-primary" onclick="saveSettings('general')">
+                                <i class="fas fa-save me-2"></i>Sauvegarder
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-lg-4">
+                <div class="card shadow">
+                    <div class="card-header">
+                        <h6 class="m-0 font-weight-bold text-info">
+                            <i class="fas fa-info-circle me-2"></i>
+                            Informations du Compte
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="text-center mb-3">
+                            <div class="avatar-circle bg-primary text-white d-inline-flex align-items-center justify-content-center" 
+                                 style="width: 80px; height: 80px; border-radius: 50%; font-size: 2rem;">
+                                {{ user.first_name[0]|upper }}{{ user.last_name[0]|upper }}
+                            </div>
+                        </div>
+                        <div class="text-center">
+                            <h6>{{ user.get_full_name() }}</h6>
+                            <p class="text-muted">{{ user.email }}</p>
+                            
+                            {% if user.is_premium %}
+                                <span class="badge bg-warning mb-2">
+                                    <i class="fas fa-crown me-1"></i>Premium
+                                </span>
+                            {% else %}
+                                <span class="badge bg-secondary mb-2">
+                                    <i class="fas fa-user me-1"></i>Gratuit
+                                </span>
+                            {% endif %}
+                        </div>
+                        
+                        <hr>
+                        
+                        <div class="small">
+                            <div class="d-flex justify-content-between mb-1">
+                                <span>Quota utilisé:</span>
+                                <strong>{{ "%.1f"|format(user.quota_used) }} / {{ "%.0f"|format(user.quota_limit) }} MB</strong>
+                            </div>
+                            <div class="progress mb-2" style="height: 8px;">
+                                <div class="progress-bar" style="width: {{ user.get_quota_percentage() }}%"></div>
+                            </div>
+                            
+                            <div class="d-flex justify-content-between mb-1">
+                                <span>Membre depuis:</span>
+                                <strong>{{ user.created_at.strftime('%m/%Y') }}</strong>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Onglet Données -->
+    <div class="tab-pane fade" id="data" role="tabpanel">
+        <div class="row mt-4">
+            <div class="col-lg-12">
+                <div class="card shadow">
+                    <div class="card-header">
+                        <h6 class="m-0 font-weight-bold text-primary">
+                            <i class="fas fa-database me-2"></i>
+                            Configuration des Données
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <form id="dataForm">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <h6><i class="fas fa-upload me-2"></i>Upload de Fichiers</h6>
+                                    
+                                    <div class="mb-3">
+                                        <label class="form-label">Taille Maximum (MB)</label>
+                                        <select class="form-select" id="maxFileSize">
+                                            <option value="50">50 MB</option>
+                                            <option value="100">100 MB</option>
+                                            <option value="250" selected>250 MB</option>
+                                            <option value="500">500 MB</option>
+                                        </select>
+                                    </div>
+                                    
+                                    <div class="mb-3">
+                                        <label class="form-label">Encodage par Défaut</label>
+                                        <select class="form-select" id="defaultEncoding">
+                                            <option value="utf-8" selected>UTF-8</option>
+                                            <option value="latin-1">Latin-1</option>
+                                            <option value="cp1252">Windows-1252</option>
+                                        </select>
+                                    </div>
+                                    
+                                    <div class="mb-3">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="autoDetectEncoding" checked>
+                                            <label class="form-check-label" for="autoDetectEncoding">
+                                                Détection automatique de l'encodage
+                                            </label>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="mb-3">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="validateOnUpload" checked>
+                                            <label class="form-check-label" for="validateOnUpload">
+                                                Validation automatique à l'upload
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="col-md-6">
+                                    <h6><i class="fas fa-broom me-2"></i>Nettoyage Automatique</h6>
+                                    
+                                    <div class="mb-3">
+                                        <label class="form-label">Mode de Nettoyage par Défaut</label>
+                                        <select class="form-select" id="defaultCleaningMode">
+                                            <option value="automatic" selected>Automatique</option>
+                                            <option value="conservative">Conservateur</option>
+                                            <option value="aggressive">Agressif</option>
+                                        </select>
+                                    </div>
+                                    
+                                    <div class="mb-3">
+                                        <label class="form-label">Gestion des Valeurs Manquantes</label>
+                                        <select class="form-select" id="missingValuesStrategy">
+                                            <option value="auto" selected>Automatique</option>
+                                            <option value="drop">Supprimer</option>
+                                            <option value="fill_mean">Moyenne</option>
+                                            <option value="fill_median">Médiane</option>
+                                        </select>
+                                    </div>
+                                    
+                                    <div class="mb-3">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="autoRemoveDuplicates" checked>
+                                            <label class="form-check-label" for="autoRemoveDuplicates">
+                                                Supprimer automatiquement les doublons
+                                            </label>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="mb-3">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="backupOriginal" checked>
+                                            <label class="form-check-label" for="backupOriginal">
+                                                Sauvegarder l'original avant nettoyage
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <hr>
+                            
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <h6><i class="fas fa-chart-bar me-2"></i>Analyse et Visualisation</h6>
+                                    
+                                    <div class="mb-3">
+                                        <label class="form-label">Nombre Max de Colonnes à Analyser</label>
+                                        <select class="form-select" id="maxColumns">
+                                            <option value="20">20 colonnes</option>
+                                            <option value="50" selected>50 colonnes</option>
+                                            <option value="100">100 colonnes</option>
+                                            <option value="unlimited">Illimité</option>
+                                        </select>
+                                    </div>
+                                    
+                                    <div class="mb-3">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="autoGenerateCharts" checked>
+                                            <label class="form-check-label" for="autoGenerateCharts">
+                                                Génération automatique de graphiques
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="col-md-6">
+                                    <h6><i class="fas fa-save me-2"></i>Sauvegarde et Rétention</h6>
+                                    
+                                    <div class="mb-3">
+                                        <label class="form-label">Durée de Rétention des Datasets</label>
+                                        <select class="form-select" id="retentionPeriod">
+                                            <option value="30">30 jours</option>
+                                            <option value="90" selected>90 jours</option>
+                                            <option value="180">180 jours</option>
+                                            <option value="365">1 an</option>
+                                            <option value="unlimited">Illimité</option>
+                                        </select>
+                                    </div>
+                                    
+                                    <div class="mb-3">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="autoArchive" checked>
+                                            <label class="form-check-label" for="autoArchive">
+                                                Archivage automatique des anciens datasets
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <button type="button" class="btn btn-primary" onclick="saveSettings('data')">
+                                <i class="fas fa-save me-2"></i>Sauvegarder
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Onglet Machine Learning -->
+    <div class="tab-pane fade" id="ml" role="tabpanel">
+        <div class="row mt-4">
+            <div class="col-lg-12">
+                <div class="card shadow">
+                    <div class="card-header">
+                        <h6 class="m-0 font-weight-bold text-primary">
+                            <i class="fas fa-brain me-2"></i>
+                            Configuration Machine Learning
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <form id="mlForm">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <h6><i class="fas fa-robot me-2"></i>AutoML</h6>
+                                    
+                                    <div class="mb-3">
+                                        <label class="form-label">Temps d'Entraînement Maximum par Défaut</label>
+                                        <select class="form-select" id="defaultTrainingTime">
+                                            <option value="15">15 minutes</option>
+                                            <option value="30" selected>30 minutes</option>
+                                            <option value="60">1 heure</option>
+                                            <option value="180">3 heures</option>
+                                        </select>
+                                    </div>
+                                    
+                                    <div class="mb-3">
+                                        <label class="form-label">Objectif de Performance par Défaut</label>
+                                        <select class="form-select" id="defaultPerformanceGoal">
+                                            <option value="accuracy" selected>Précision</option>
+                                            <option value="speed">Rapidité</option>
+                                            <option value="interpretability">Interprétabilité</option>
+                                            <option value="balanced">Équilibré</option>
+                                        </select>
+                                    </div>
+                                    
+                                    <div class="mb-3">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="enableEnsembleByDefault" checked>
+                                            <label class="form-check-label" for="enableEnsembleByDefault">
+                                                Activer les méthodes d'ensemble par défaut
+                                            </label>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="mb-3">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="enableFeatureEngineering" checked>
+                                            <label class="form-check-label" for="enableFeatureEngineering">
+                                                Feature Engineering automatique
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="col-md-6">
+                                    <h6><i class="fas fa-cogs me-2"></i>Algorithmes Préférés</h6>
+                                    
+                                    <div class="mb-3">
+                                        <label class="form-label">Algorithmes de Classification (ordre de priorité)</label>
+                                        <div class="algorithm-preferences" id="classificationAlgorithms">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" id="randomForest" checked>
+                                                <label class="form-check-label" for="randomForest">Random Forest</label>
+                                            </div>
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" id="xgboost" checked>
+                                                <label class="form-check-label" for="xgboost">XGBoost</label>
+                                            </div>
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" id="logisticRegression" checked>
+                                                <label class="form-check-label" for="logisticRegression">Logistic Regression</label>
+                                            </div>
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" id="svm">
+                                                <label class="form-check-label" for="svm">SVM</label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <hr>
+                            
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <h6><i class="fas fa-chart-line me-2"></i>Validation et Métriques</h6>
+                                    
+                                    <div class="mb-3">
+                                        <label class="form-label">Méthode de Validation par Défaut</label>
+                                        <select class="form-select" id="validationMethod">
+                                            <option value="train_test_split" selected>Train/Test Split</option>
+                                            <option value="cross_validation">Validation Croisée</option>
+                                            <option value="stratified">Stratified K-Fold</option>
+                                        </select>
+                                    </div>
+                                    
+                                    <div class="mb-3">
+                                        <label class="form-label">Ratio Train/Test</label>
+                                        <select class="form-select" id="trainTestRatio">
+                                            <option value="0.7">70/30</option>
+                                            <option value="0.8" selected>80/20</option>
+                                            <option value="0.9">90/10</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                
+                                <div class="col-md-6">
+                                    <h6><i class="fas fa-download me-2"></i>Export et Déploiement</h6>
+                                    
+                                    <div class="mb-3">
+                                        <label class="form-label">Format d'Export par Défaut</label>
+                                        <select class="form-select" id="exportFormat">
+                                            <option value="pickle" selected>Pickle (.pkl)</option>
+                                            <option value="joblib">Joblib (.joblib)</option>
+                                            <option value="onnx">ONNX (.onnx)</option>
+                                        </select>
+                                    </div>
+                                    
+                                    <div class="mb-3">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="autoDeployBestModel" checked>
+                                            <label class="form-check-label" for="autoDeployBestModel">
+                                                Déployer automatiquement le meilleur modèle
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <button type="button" class="btn btn-primary" onclick="saveSettings('ml')">
+                                <i class="fas fa-save me-2"></i>Sauvegarder
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Onglet Notifications -->
+    <div class="tab-pane fade" id="notifications" role="tabpanel">
+        <div class="row mt-4">
+            <div class="col-lg-8">
+                <div class="card shadow">
+                    <div class="card-header">
+                        <h6 class="m-0 font-weight-bold text-primary">
+                            <i class="fas fa-bell me-2"></i>
+                            Préférences de Notification
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <form id="notificationsForm">
+                            <h6><i class="fas fa-envelope me-2"></i>Notifications Email</h6>
+                            
+                            <div class="mb-3">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="emailUploadComplete" checked>
+                                    <label class="form-check-label" for="emailUploadComplete">
+                                        Upload de dataset terminé
+                                    </label>
+                                </div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="emailCleaningComplete" checked>
+                                    <label class="form-check-label" for="emailCleaningComplete">
+                                        Nettoyage de données terminé
+                                    </label>
+                                </div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="emailAnalysisComplete" checked>
+                                    <label class="form-check-label" for="emailAnalysisComplete">
+                                        Analyse de données terminée
+                                    </label>
+                                </div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="emailMLComplete" checked>
+                                    <label class="form-check-label" for="emailMLComplete">
+                                        Entraînement ML terminé
+                                    </label>
+                                </div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="emailErrors" checked>
+                                    <label class="form-check-label" for="emailErrors">
+                                        Erreurs et échecs de traitement
+                                    </label>
+                                </div>
+                            </div>
+                            
+                            <hr>
+                            
+                            <h6><i class="fas fa-desktop me-2"></i>Notifications dans l'Application</h6>
+                            
+                            <div class="mb-3">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="browserNotifications" checked>
+                                    <label class="form-check-label" for="browserNotifications">
+                                        Notifications navigateur (push)
+                                    </label>
+                                </div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="soundNotifications">
+                                    <label class="form-check-label" for="soundNotifications">
+                                        Notifications sonores
+                                    </label>
+                                </div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label class="form-label">Fréquence des Résumés</label>
+                                <select class="form-select" id="summaryFrequency">
+                                    <option value="never">Jamais</option>
+                                    <option value="daily">Quotidien</option>
+                                    <option value="weekly" selected>Hebdomadaire</option>
+                                    <option value="monthly">Mensuel</option>
+                                </select>
+                            </div>
+                            
+                            <button type="button" class="btn btn-primary" onclick="saveSettings('notifications')">
+                                <i class="fas fa-save me-2"></i>Sauvegarder
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-lg-4">
+                <div class="card shadow">
+                    <div class="card-header">
+                        <h6 class="m-0 font-weight-bold text-success">
+                            <i class="fas fa-test-tube me-2"></i>
+                            Test de Notification
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <p class="small text-muted">Testez vos paramètres de notification</p>
+                        
+                        <div class="d-grid gap-2">
+                            <button class="btn btn-outline-primary btn-sm" onclick="testNotification('email')">
+                                <i class="fas fa-envelope me-1"></i>Test Email
+                            </button>
+                            <button class="btn btn-outline-success btn-sm" onclick="testNotification('browser')">
+                                <i class="fas fa-desktop me-1"></i>Test Navigateur
+                            </button>
+                            <button class="btn btn-outline-warning btn-sm" onclick="testNotification('sound')">
+                                <i class="fas fa-volume-up me-1"></i>Test Son
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card shadow mt-4">
+                    <div class="card-header">
+                        <h6 class="m-0 font-weight-bold text-info">
+                            <i class="fas fa-history me-2"></i>
+                            Historique Récent
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="timeline">
+                            <div class="timeline-item">
+                                <i class="fas fa-check-circle text-success"></i>
+                                <span class="small">Dataset "ventes.csv" traité - Il y a 2h</span>
+                            </div>
+                            <div class="timeline-item">
+                                <i class="fas fa-brain text-info"></i>
+                                <span class="small">Modèle ML entraîné - Il y a 5h</span>
+                            </div>
+                            <div class="timeline-item">
+                                <i class="fas fa-upload text-primary"></i>
+                                <span class="small">Nouveau dataset uploadé - Hier</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Onglet Sécurité -->
+    <div class="tab-pane fade" id="security" role="tabpanel">
+        <div class="row mt-4">
+            <div class="col-lg-8">
+                <div class="card shadow">
+                    <div class="card-header">
+                        <h6 class="m-0 font-weight-bold text-primary">
+                            <i class="fas fa-shield-alt me-2"></i>
+                            Paramètres de Sécurité
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <form id="securityForm">
+                            <h6><i class="fas fa-key me-2"></i>Authentification</h6>
+                            
+                            <div class="mb-3">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="enable2FA">
+                                    <label class="form-check-label" for="enable2FA">
+                                        Authentification à deux facteurs (2FA)
+                                    </label>
+                                </div>
+                                <div class="form-text">Recommandé pour une sécurité renforcée</div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label class="form-label">Durée de Session</label>
+                                <select class="form-select" id="sessionDuration">
+                                    <option value="1">1 heure</option>
+                                    <option value="4">4 heures</option>
+                                    <option value="8" selected>8 heures</option>
+                                    <option value="24">24 heures</option>
+                                </select>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="autoLogout" checked>
+                                    <label class="form-check-label" for="autoLogout">
+                                        Déconnexion automatique en cas d'inactivité
+                                    </label>
+                                </div>
+                            </div>
+                            
+                            <hr>
+                            
+                            <h6><i class="fas fa-database me-2"></i>Protection des Données</h6>
+                            
+                            <div class="mb-3">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="encryptData" checked>
+                                    <label class="form-check-label" for="encryptData">
+                                        Chiffrement des données sensibles
+                                    </label>
+                                </div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="autoDelete">
+                                    <label class="form-check-label" for="autoDelete">
+                                        Suppression automatique des données après expiration
+                                    </label>
+                                </div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label class="form-label">Niveau de Logs de Sécurité</label>
+                                <select class="form-select" id="securityLogLevel">
+                                    <option value="basic" selected>Basique</option>
+                                    <option value="detailed">Détaillé</option>
+                                    <option value="verbose">Verbeux</option>
+                                </select>
+                            </div>
+                            
+                            <hr>
+                            
+                            <h6><i class="fas fa-user-shield me-2"></i>Confidentialité</h6>
+                            
+                            <div class="mb-3">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="shareUsageStats">
+                                    <label class="form-check-label" for="shareUsageStats">
+                                        Partager les statistiques d'usage anonymes (pour améliorer le service)
+                                    </label>
+                                </div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="allowAnalytics" checked>
+                                    <label class="form-check-label" for="allowAnalytics">
+                                        Autoriser l'analyse d'utilisation
+                                    </label>
+                                </div>
+                            </div>
+                            
+                            <button type="button" class="btn btn-primary" onclick="saveSettings('security')">
+                                <i class="fas fa-save me-2"></i>Sauvegarder
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-lg-4">
+                <div class="card shadow">
+                    <div class="card-header">
+                        <h6 class="m-0 font-weight-bold text-warning">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            Sécurité du Compte
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="security-score text-center mb-3">
+                            <div class="circular-progress" style="width: 100px; height: 100px; margin: 0 auto;">
+                                <svg width="100" height="100">
+                                    <circle cx="50" cy="50" r="40" stroke="#e9ecef" stroke-width="8" fill="none"></circle>
+                                    <circle cx="50" cy="50" r="40" stroke="#28a745" stroke-width="8" fill="none" 
+                                            stroke-dasharray="188" stroke-dashoffset="75" 
+                                            transform="rotate(-90 50 50)"></circle>
+                                </svg>
+                                <div class="score-text" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);">
+                                    <strong style="font-size: 1.5rem;">75%</strong><br>
+                                    <small class="text-muted">Score</small>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="security-recommendations">
+                            <h6>Recommandations:</h6>
+                            <ul class="small">
+                                <li class="text-warning">
+                                    <i class="fas fa-exclamation-circle me-1"></i>
+                                    Activez l'authentification 2FA
+                                </li>
+                                <li class="text-success">
+                                    <i class="fas fa-check-circle me-1"></i>
+                                    Mot de passe fort utilisé
+                                </li>
+                                <li class="text-success">
+                                    <i class="fas fa-check-circle me-1"></i>
+                                    Données chiffrées
+                                </li>
+                            </ul>
+                        </div>
+                        
+                        <div class="d-grid gap-2 mt-3">
+                            <a href="{{ url_for('profil') }}" class="btn btn-outline-primary btn-sm">
+                                <i class="fas fa-key me-1"></i>Changer Mot de Passe
+                            </a>
+                            <button class="btn btn-outline-danger btn-sm" onclick="downloadSecurityReport()">
+                                <i class="fas fa-download me-1"></i>Rapport de Sécurité
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Onglet Avancé -->
+    <div class="tab-pane fade" id="advanced" role="tabpanel">
+        <div class="row mt-4">
+            <div class="col-lg-12">
+                <div class="card shadow">
+                    <div class="card-header">
+                        <h6 class="m-0 font-weight-bold text-primary">
+                            <i class="fas fa-wrench me-2"></i>
+                            Paramètres Avancés
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="alert alert-warning">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            <strong>Attention:</strong> Ces paramètres sont destinés aux utilisateurs avancés. 
+                            Une mauvaise configuration peut affecter les performances.
+                        </div>
+                        
+                        <form id="advancedForm">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <h6><i class="fas fa-tachometer-alt me-2"></i>Performance</h6>
+                                    
+                                    <div class="mb-3">
+                                        <label class="form-label">Nombre de Threads de Traitement</label>
+                                        <select class="form-select" id="processingThreads">
+                                            <option value="auto" selected>Automatique</option>
+                                            <option value="1">1 thread</option>
+                                            <option value="2">2 threads</option>
+                                            <option value="4">4 threads</option>
+                                            <option value="8">8 threads</option>
+                                        </select>
+                                    </div>
+                                    
+                                    <div class="mb-3">
+                                        <label class="form-label">Limite Mémoire (MB)</label>
+                                        <input type="number" class="form-control" id="memoryLimit" value="2048" min="512" max="16384">
+                                    </div>
+                                    
+                                    <div class="mb-3">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="enableCache" checked>
+                                            <label class="form-check-label" for="enableCache">
+                                                Cache des résultats activé
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="col-md-6">
+                                    <h6><i class="fas fa-code me-2"></i>Développement</h6>
+                                    
+                                    <div class="mb-3">
+                                        <label class="form-label">Niveau de Debug</label>
+                                        <select class="form-select" id="debugLevel">
+                                            <option value="none" selected>Aucun</option>
+                                            <option value="error">Erreurs seulement</option>
+                                            <option value="warning">Avertissements</option>
+                                            <option value="info">Informations</option>
+                                            <option value="debug">Debug complet</option>
+                                        </select>
+                                    </div>
+                                    
+                                    <div class="mb-3">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="enableProfiling">
+                                            <label class="form-check-label" for="enableProfiling">
+                                                Profilage des performances
+                                            </label>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="mb-3">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="experimentalFeatures">
+                                            <label class="form-check-label" for="experimentalFeatures">
+                                                Fonctionnalités expérimentales
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <hr>
+                            
+                            <h6><i class="fas fa-download me-2"></i>Import/Export de Configuration</h6>
+                            
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <button type="button" class="btn btn-outline-success w-100" onclick="exportSettings()">
+                                        <i class="fas fa-download me-2"></i>
+                                        Exporter Configuration
+                                    </button>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="input-group">
+                                        <input type="file" class="form-control" id="importFile" accept=".json">
+                                        <button class="btn btn-outline-primary" type="button" onclick="importSettings()">
+                                            <i class="fas fa-upload me-1"></i>Importer
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <hr>
+                            
+                            <div class="d-flex justify-content-between">
+                                <button type="button" class="btn btn-primary" onclick="saveSettings('advanced')">
+                                    <i class="fas fa-save me-2"></i>Sauvegarder
+                                </button>
+                                
+                                <button type="button" class="btn btn-outline-danger" onclick="resetToDefaults()">
+                                    <i class="fas fa-undo me-2"></i>Réinitialiser par Défaut
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.timeline-item {
+    display: flex;
+    align-items: center;
+    margin-bottom: 15px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #eee;
+}
+
+.timeline-item i {
+    margin-right: 10px;
+    width: 20px;
+}
+
+.circular-progress {
+    position: relative;
+}
+
+.algorithm-preferences .form-check {
+    margin-bottom: 8px;
+}
+
+.card-header h6 {
+    margin: 0;
+}
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Charger les paramètres sauvegardés
+    loadSavedSettings();
+    
+    // Gestion du bouton "Sauvegarder Tout"
+    document.getElementById('saveAllBtn')?.addEventListener('click', saveAllSettings);
+});
+
+function loadSavedSettings() {
+    // Simuler le chargement des paramètres depuis le localStorage ou l'API
+    const savedSettings = JSON.parse(localStorage.getItem('userSettings') || '{}');
+    
+    // Appliquer les paramètres sauvegardés
+    Object.keys(savedSettings).forEach(key => {
+        const element = document.getElementById(key);
+        if (element) {
+            if (element.type === 'checkbox') {
+                element.checked = savedSettings[key];
+            } else {
+                element.value = savedSettings[key];
+            }
+        }
+    });
+}
+
+function saveSettings(section) {
+    const forms = {
+        general: '#generalForm',
+        data: '#dataForm',
+        ml: '#mlForm',
+        notifications: '#notificationsForm',
+        security: '#securityForm',
+        advanced: '#advancedForm'
+    };
+    
+    const form = document.querySelector(forms[section]);
+    if (!form) return;
+    
+    const formData = new FormData(form);
+    const settings = {};
+    
+    // Collecter tous les champs du formulaire
+    const inputs = form.querySelectorAll('input, select, textarea');
+    inputs.forEach(input => {
+        if (input.type === 'checkbox') {
+            settings[input.id] = input.checked;
+        } else if (input.type === 'radio' && input.checked) {
+            settings[input.name] = input.value;
+        } else if (input.type !== 'radio') {
+            settings[input.id] = input.value;
+        }
+    });
+    
+    // Sauvegarder localement (à remplacer par un appel API)
+    const allSettings = JSON.parse(localStorage.getItem('userSettings') || '{}');
+    Object.assign(allSettings, settings);
+    localStorage.setItem('userSettings', JSON.stringify(allSettings));
+    
+    // Simuler un appel API
+    setTimeout(() => {
+        showToast(`Paramètres ${section} sauvegardés avec succès!`, 'success');
+    }, 500);
+    
+    console.log(`Paramètres ${section} sauvegardés:`, settings);
+}
+
+function saveAllSettings() {
+    const sections = ['general', 'data', 'ml', 'notifications', 'security', 'advanced'];
+    
+    let saved = 0;
+    sections.forEach(section => {
+        saveSettings(section);
+        saved++;
+    });
+    
+    setTimeout(() => {
+        showToast(`Tous les paramètres ont été sauvegardés!`, 'success');
+    }, 1000);
+}
+
+function testNotification(type) {
+    switch(type) {
+        case 'email':
+            showToast('Email de test envoyé! Vérifiez votre boîte de réception.', 'info');
+            break;
+        case 'browser':
+            if ('Notification' in window) {
+                if (Notification.permission === 'granted') {
+                    new Notification('DataCleaner Pro', {
+                        body: 'Ceci est une notification de test!',
+                        icon: '/static/favicon.ico'
+                    });
+                } else {
+                    Notification.requestPermission().then(permission => {
+                        if (permission === 'granted') {
+                            new Notification('DataCleaner Pro', {
+                                body: 'Notifications activées!',
+                                icon: '/static/favicon.ico'
+                            });
+                        }
+                    });
+                }
+            } else {
+                showToast('Les notifications navigateur ne sont pas supportées', 'warning');
+            }
+            break;
+        case 'sound':
+            // Simuler un son de notification
+            const audio = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEATQGAAA==');
+            audio.play().catch(() => {
+                showToast('Son de test joué (peut être bloqué par le navigateur)', 'info');
+            });
+            break;
+    }
+}
+
+function exportSettings() {
+    const allSettings = JSON.parse(localStorage.getItem('userSettings') || '{}');
+    const exportData = {
+        version: '2.0.0',
+        exported_at: new Date().toISOString(),
+        settings: allSettings,
+        user_info: {
+            // Informations non-sensibles de l'utilisateur
+            language: document.getElementById('interfaceLanguage')?.value,
+            timezone: document.getElementById('timezone')?.value
+        }
+    };
+    
+    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `datacleaner-pro-settings-${new Date().toISOString().split('T')[0]}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    
+    showToast('Configuration exportée avec succès!', 'success');
+}
+
+function importSettings() {
+    const fileInput = document.getElementById('importFile');
+    const file = fileInput.files[0];
+    
+    if (!file) {
+        showToast('Veuillez sélectionner un fichier de configuration', 'warning');
+        return;
+    }
+    
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        try {
+            const importData = JSON.parse(e.target.result);
+            
+            if (importData.version && importData.settings) {
+                // Valider et appliquer les paramètres
+                localStorage.setItem('userSettings', JSON.stringify(importData.settings));
+                
+                // Recharger la page pour appliquer les paramètres
+                if (confirm('Configuration importée! Voulez-vous recharger la page pour appliquer les changements?')) {
+                    location.reload();
+                } else {
+                    showToast('Configuration importée. Rechargez la page pour voir les changements.', 'info');
+                }
+            } else {
+                showToast('Format de fichier invalide', 'error');
+            }
+        } catch (error) {
+            showToast('Erreur lors de l\'importation: fichier corrompu', 'error');
+        }
+    };
+    
+    reader.readAsText(file);
+}
+
+function resetToDefaults() {
+    if (confirm('Êtes-vous sûr de vouloir réinitialiser tous les paramètres par défaut? Cette action est irréversible.')) {
+        localStorage.removeItem('userSettings');
+        
+        showToast('Paramètres réinitialisés aux valeurs par défaut', 'success');
+        
+        // Recharger la page après 2 secondes
+        setTimeout(() => {
+            location.reload();
+        }, 2000);
+    }
+}
+
+function downloadSecurityReport() {
+    const report = {
+        generated_at: new Date().toISOString(),
+        user_id: '{{ user.id }}',
+        security_score: 75,
+        recommendations: [
+            'Activer l\'authentification à deux facteurs',
+            'Renouveler le mot de passe régulièrement',
+            'Vérifier les connexions actives'
+        ],
+        recent_activity: [
+            { action: 'Login', timestamp: new Date().toISOString(), ip: '192.168.1.1' },
+            { action: 'Settings updated', timestamp: new Date().toISOString(), ip: '192.168.1.1' }
+        ]
+    };
+    
+    const blob = new Blob([JSON.stringify(report, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `security-report-${new Date().toISOString().split('T')[0]}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    
+    showToast('Rapport de sécurité téléchargé', 'success');
+}
+
+function showToast(message, type = 'info') {
+    // Créer un toast Bootstrap
+    const toastHtml = `
+        <div class="toast align-items-center text-white bg-${type === 'success' ? 'success' : type === 'error' ? 'danger' : type === 'warning' ? 'warning' : 'info'} border-0" role="alert">
+            <div class="d-flex">
+                <div class="toast-body">
+                    <i class="fas fa-${type === 'success' ? 'check' : type === 'error' ? 'times' : type === 'warning' ? 'exclamation-triangle' : 'info-circle'} me-2"></i>
+                    ${message}
+                </div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+            </div>
+        </div>
+    `;
+    
+    // Ajouter le toast au DOM
+    let toastContainer = document.querySelector('.toast-container');
+    if (!toastContainer) {
+        toastContainer = document.createElement('div');
+        toastContainer.className = 'toast-container position-fixed bottom-0 end-0 p-3';
+        document.body.appendChild(toastContainer);
+    }
+    
+    toastContainer.insertAdjacentHTML('beforeend', toastHtml);
+    
+    // Initialiser et afficher le toast
+    const toastElement = toastContainer.lastElementChild;
+    const toast = new bootstrap.Toast(toastElement, { delay: 3000 });
+    toast.show();
+    
+    // Supprimer le toast après fermeture
+    toastElement.addEventListener('hidden.bs.toast', function() {
+        this.remove();
+    });
+}
+</script>
+{% endblock %}

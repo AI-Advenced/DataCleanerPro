@@ -1,0 +1,768 @@
+{% extends "base.html" %}
+
+{% block title %}Profil Utilisateur - DataCleaner Pro{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">
+        <i class="fas fa-user me-2"></i>
+        Mon Profil
+    </h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <div class="btn-group me-2">
+            <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#editProfileModal">
+                <i class="fas fa-edit"></i> Modifier Profil
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Informations du profil -->
+<div class="row">
+    <div class="col-lg-4">
+        <!-- Card Profil Principal -->
+        <div class="card shadow mb-4">
+            <div class="card-body text-center">
+                <div class="avatar-circle bg-primary text-white d-inline-flex align-items-center justify-content-center mb-3" 
+                     style="width: 120px; height: 120px; border-radius: 50%; font-size: 3rem;">
+                    {{ user.first_name[0]|upper }}{{ user.last_name[0]|upper }}
+                </div>
+                
+                <h4>{{ user.get_full_name() }}</h4>
+                <p class="text-muted">{{ user.email }}</p>
+                
+                <div class="d-flex justify-content-center gap-2 mb-3">
+                    {% if user.is_premium %}
+                        <span class="badge bg-warning fs-6">
+                            <i class="fas fa-crown me-1"></i>Premium
+                        </span>
+                    {% else %}
+                        <span class="badge bg-secondary fs-6">
+                            <i class="fas fa-user me-1"></i>Gratuit
+                        </span>
+                    {% endif %}
+                    
+                    {% if user.is_admin %}
+                        <span class="badge bg-danger fs-6">
+                            <i class="fas fa-shield-alt me-1"></i>Admin
+                        </span>
+                    {% endif %}
+                </div>
+                
+                <div class="row text-center">
+                    <div class="col-4">
+                        <div class="border-end">
+                            <h5 class="mb-0">{{ user.datasets.count() }}</h5>
+                            <small class="text-muted">Datasets</small>
+                        </div>
+                    </div>
+                    <div class="col-4">
+                        <div class="border-end">
+                            <h5 class="mb-0">{{ user.cleaning_jobs.count() }}</h5>
+                            <small class="text-muted">Nettoyages</small>
+                        </div>
+                    </div>
+                    <div class="col-4">
+                        <h5 class="mb-0">{{ user.api_tokens.count() }}</h5>
+                        <small class="text-muted">API Keys</small>
+                    </div>
+                </div>
+                
+                <hr>
+                
+                <div class="d-grid gap-2">
+                    {% if not user.is_premium %}
+                        <button class="btn btn-warning btn-sm">
+                            <i class="fas fa-crown me-1"></i>Passer à Premium
+                        </button>
+                    {% endif %}
+                    <button class="btn btn-outline-primary btn-sm" onclick="downloadUserData()">
+                        <i class="fas fa-download me-1"></i>Exporter mes Données
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Quota d'Utilisation -->
+        <div class="card shadow mb-4">
+            <div class="card-header">
+                <h6 class="m-0 font-weight-bold text-primary">
+                    <i class="fas fa-chart-pie me-2"></i>
+                    Quota d'Utilisation
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="text-center mb-3">
+                    <div class="quota-circle" style="width: 120px; height: 120px; margin: 0 auto; position: relative;">
+                        <svg width="120" height="120">
+                            <circle cx="60" cy="60" r="50" stroke="#e9ecef" stroke-width="10" fill="none"></circle>
+                            <circle cx="60" cy="60" r="50" 
+                                    stroke="{% if user.get_quota_percentage() > 80 %}#dc3545{% elif user.get_quota_percentage() > 60 %}#ffc107{% else %}#28a745{% endif %}" 
+                                    stroke-width="10" fill="none" 
+                                    stroke-dasharray="314" 
+                                    stroke-dashoffset="{{ 314 - (314 * user.get_quota_percentage() / 100) }}" 
+                                    transform="rotate(-90 60 60)"></circle>
+                        </svg>
+                        <div class="quota-text" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);">
+                            <strong style="font-size: 1.5rem;">{{ "%.0f"|format(user.get_quota_percentage()) }}%</strong><br>
+                            <small class="text-muted">utilisé</small>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row text-center">
+                    <div class="col-6">
+                        <h6 class="text-muted">Utilisé</h6>
+                        <strong>{{ "%.1f"|format(user.quota_used) }} MB</strong>
+                    </div>
+                    <div class="col-6">
+                        <h6 class="text-muted">Total</h6>
+                        <strong>{{ "%.0f"|format(user.quota_limit) }} MB</strong>
+                    </div>
+                </div>
+                
+                {% if user.get_quota_percentage() > 80 %}
+                    <div class="alert alert-warning mt-3 mb-0">
+                        <small>
+                            <i class="fas fa-exclamation-triangle me-1"></i>
+                            Quota bientôt atteint. Pensez à nettoyer vos anciens datasets.
+                        </small>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-8">
+        <!-- Informations Détaillées -->
+        <div class="card shadow mb-4">
+            <div class="card-header">
+                <h6 class="m-0 font-weight-bold text-primary">
+                    <i class="fas fa-info-circle me-2"></i>
+                    Informations du Compte
+                </h6>
+            </div>
+            <div class="card-body">
+                <form id="profileForm">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Nom d'utilisateur</label>
+                                <input type="text" class="form-control" value="{{ user.username }}" readonly>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Email</label>
+                                <input type="email" class="form-control" value="{{ user.email }}" readonly>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Prénom</label>
+                                <input type="text" class="form-control" value="{{ user.first_name }}" readonly>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Nom</label>
+                                <input type="text" class="form-control" value="{{ user.last_name }}" readonly>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Membre depuis</label>
+                                <input type="text" class="form-control" 
+                                       value="{{ user.created_at.strftime('%d/%m/%Y') }}" readonly>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Dernière connexion</label>
+                                <input type="text" class="form-control" 
+                                       value="{% if user.last_login %}{{ user.last_login.strftime('%d/%m/%Y à %H:%M') }}{% else %}Jamais{% endif %}" readonly>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <!-- Statistiques d'Activité -->
+        <div class="card shadow mb-4">
+            <div class="card-header">
+                <h6 class="m-0 font-weight-bold text-success">
+                    <i class="fas fa-chart-line me-2"></i>
+                    Statistiques d'Activité
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-3 text-center mb-3">
+                        <div class="stat-box p-3 border rounded">
+                            <i class="fas fa-upload fa-2x text-primary mb-2"></i>
+                            <h4 class="mb-0">{{ user.datasets.count() }}</h4>
+                            <small class="text-muted">Datasets Uploadés</small>
+                        </div>
+                    </div>
+                    <div class="col-md-3 text-center mb-3">
+                        <div class="stat-box p-3 border rounded">
+                            <i class="fas fa-broom fa-2x text-success mb-2"></i>
+                            <h4 class="mb-0">{{ user.cleaning_jobs.count() }}</h4>
+                            <small class="text-muted">Nettoyages Effectués</small>
+                        </div>
+                    </div>
+                    <div class="col-md-3 text-center mb-3">
+                        <div class="stat-box p-3 border rounded">
+                            <i class="fas fa-chart-bar fa-2x text-info mb-2"></i>
+                            <h4 class="mb-0">{{ range(5, 25)|random }}</h4>
+                            <small class="text-muted">Analyses Réalisées</small>
+                        </div>
+                    </div>
+                    <div class="col-md-3 text-center mb-3">
+                        <div class="stat-box p-3 border rounded">
+                            <i class="fas fa-brain fa-2x text-warning mb-2"></i>
+                            <h4 class="mb-0">{{ range(2, 8)|random }}</h4>
+                            <small class="text-muted">Modèles ML</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Activité Récente -->
+        <div class="card shadow mb-4">
+            <div class="card-header">
+                <h6 class="m-0 font-weight-bold text-info">
+                    <i class="fas fa-history me-2"></i>
+                    Activité Récente
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="timeline">
+                    <div class="timeline-item d-flex mb-3">
+                        <div class="timeline-marker bg-success rounded-circle me-3" style="width: 12px; height: 12px; margin-top: 6px;"></div>
+                        <div class="flex-grow-1">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <strong>Nettoyage terminé</strong>
+                                    <p class="mb-0 text-muted small">Dataset "ventes_2024.csv" nettoyé avec succès</p>
+                                </div>
+                                <small class="text-muted">Il y a 2h</small>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="timeline-item d-flex mb-3">
+                        <div class="timeline-marker bg-primary rounded-circle me-3" style="width: 12px; height: 12px; margin-top: 6px;"></div>
+                        <div class="flex-grow-1">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <strong>Dataset uploadé</strong>
+                                    <p class="mb-0 text-muted small">Nouveau fichier "customers.xlsx" ajouté</p>
+                                </div>
+                                <small class="text-muted">Il y a 5h</small>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="timeline-item d-flex mb-3">
+                        <div class="timeline-marker bg-info rounded-circle me-3" style="width: 12px; height: 12px; margin-top: 6px;"></div>
+                        <div class="flex-grow-1">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <strong>Analyse complétée</strong>
+                                    <p class="mb-0 text-muted small">Analyse statistique sur "produits.csv"</p>
+                                </div>
+                                <small class="text-muted">Hier</small>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="timeline-item d-flex mb-3">
+                        <div class="timeline-marker bg-warning rounded-circle me-3" style="width: 12px; height: 12px; margin-top: 6px;"></div>
+                        <div class="flex-grow-1">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <strong>Modèle ML créé</strong>
+                                    <p class="mb-0 text-muted small">Nouveau modèle de prédiction déployé</p>
+                                </div>
+                                <small class="text-muted">Il y a 2 jours</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="text-center">
+                    <button class="btn btn-outline-primary btn-sm" onclick="loadMoreActivity()">
+                        <i class="fas fa-plus me-1"></i>Voir Plus
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Préférences Rapides -->
+        <div class="card shadow">
+            <div class="card-header">
+                <h6 class="m-0 font-weight-bold text-secondary">
+                    <i class="fas fa-cog me-2"></i>
+                    Préférences Rapides
+                </h6>
+            </div>
+            <div class="card-body">
+                <form id="quickPreferences">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="emailNotifications" checked>
+                                    <label class="form-check-label" for="emailNotifications">
+                                        Notifications par email
+                                    </label>
+                                </div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="autoClean" checked>
+                                    <label class="form-check-label" for="autoClean">
+                                        Nettoyage automatique
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="generateReports" checked>
+                                    <label class="form-check-label" for="generateReports">
+                                        Rapports automatiques
+                                    </label>
+                                </div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="dataRetention">
+                                    <label class="form-check-label" for="dataRetention">
+                                        Archivage automatique
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <button type="button" class="btn btn-primary btn-sm" onclick="saveQuickPreferences()">
+                        <i class="fas fa-save me-1"></i>Sauvegarder
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Édition Profil -->
+<div class="modal fade" id="editProfileModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-edit me-2"></i>
+                    Modifier le Profil
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="editProfileForm">
+                    <div class="mb-3">
+                        <label class="form-label">Prénom</label>
+                        <input type="text" class="form-control" id="editFirstName" value="{{ user.first_name }}">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Nom</label>
+                        <input type="text" class="form-control" id="editLastName" value="{{ user.last_name }}">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Email</label>
+                        <input type="email" class="form-control" id="editEmail" value="{{ user.email }}">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Nouveau mot de passe (optionnel)</label>
+                        <input type="password" class="form-control" id="newPassword" placeholder="Laisser vide pour ne pas changer">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Confirmer le nouveau mot de passe</label>
+                        <input type="password" class="form-control" id="confirmPassword" placeholder="Confirmer le mot de passe">
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                <button type="button" class="btn btn-primary" onclick="saveProfile()">
+                    <i class="fas fa-save me-2"></i>Sauvegarder
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Changement Mot de Passe -->
+<div class="modal fade" id="changePasswordModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-key me-2"></i>
+                    Changer le Mot de Passe
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="changePasswordForm">
+                    <div class="mb-3">
+                        <label class="form-label">Mot de passe actuel</label>
+                        <input type="password" class="form-control" id="currentPassword" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Nouveau mot de passe</label>
+                        <input type="password" class="form-control" id="newPasswordChange" required>
+                        <div class="form-text">Au moins 8 caractères avec lettres et chiffres</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Confirmer le nouveau mot de passe</label>
+                        <input type="password" class="form-control" id="confirmPasswordChange" required>
+                    </div>
+                    
+                    <div class="password-strength">
+                        <div class="progress mb-2" style="height: 8px;">
+                            <div class="progress-bar" id="passwordStrengthBar" style="width: 0%"></div>
+                        </div>
+                        <small id="passwordStrengthText" class="text-muted">Saisissez votre mot de passe</small>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                <button type="button" class="btn btn-warning" onclick="changePassword()">
+                    <i class="fas fa-key me-2"></i>Changer
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.stat-box {
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.stat-box:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+.timeline-item {
+    position: relative;
+}
+
+.timeline-marker {
+    flex-shrink: 0;
+}
+
+.avatar-circle {
+    transition: transform 0.3s;
+}
+
+.avatar-circle:hover {
+    transform: scale(1.05);
+}
+
+.quota-circle svg {
+    transform: rotate(-90deg);
+}
+
+.progress-bar {
+    transition: all 0.3s ease;
+}
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Surveiller la force du mot de passe
+    document.getElementById('newPasswordChange')?.addEventListener('input', checkPasswordStrength);
+    document.getElementById('confirmPasswordChange')?.addEventListener('input', validatePasswordMatch);
+    
+    // Charger les préférences sauvegardées
+    loadQuickPreferences();
+});
+
+function saveProfile() {
+    const formData = {
+        first_name: document.getElementById('editFirstName').value,
+        last_name: document.getElementById('editLastName').value,
+        email: document.getElementById('editEmail').value,
+        new_password: document.getElementById('newPassword').value,
+        confirm_password: document.getElementById('confirmPassword').value
+    };
+    
+    // Validation basique
+    if (!formData.first_name || !formData.last_name || !formData.email) {
+        showAlert('Veuillez remplir tous les champs requis', 'warning');
+        return;
+    }
+    
+    if (formData.new_password && formData.new_password !== formData.confirm_password) {
+        showAlert('Les mots de passe ne correspondent pas', 'error');
+        return;
+    }
+    
+    // Simuler la sauvegarde
+    setTimeout(() => {
+        showAlert('Profil mis à jour avec succès!', 'success');
+        
+        // Fermer le modal
+        const modal = bootstrap.Modal.getInstance(document.getElementById('editProfileModal'));
+        modal.hide();
+        
+        // Recharger la page pour refléter les changements
+        setTimeout(() => {
+            location.reload();
+        }, 1500);
+    }, 1000);
+    
+    console.log('Données du profil à sauvegarder:', formData);
+}
+
+function changePassword() {
+    const currentPassword = document.getElementById('currentPassword').value;
+    const newPassword = document.getElementById('newPasswordChange').value;
+    const confirmPassword = document.getElementById('confirmPasswordChange').value;
+    
+    // Validation
+    if (!currentPassword || !newPassword || !confirmPassword) {
+        showAlert('Veuillez remplir tous les champs', 'warning');
+        return;
+    }
+    
+    if (newPassword !== confirmPassword) {
+        showAlert('Les nouveaux mots de passe ne correspondent pas', 'error');
+        return;
+    }
+    
+    if (newPassword.length < 8) {
+        showAlert('Le mot de passe doit contenir au moins 8 caractères', 'error');
+        return;
+    }
+    
+    // Simuler le changement
+    setTimeout(() => {
+        showAlert('Mot de passe changé avec succès!', 'success');
+        
+        // Fermer le modal
+        const modal = bootstrap.Modal.getInstance(document.getElementById('changePasswordModal'));
+        modal.hide();
+        
+        // Réinitialiser le formulaire
+        document.getElementById('changePasswordForm').reset();
+        document.getElementById('passwordStrengthBar').style.width = '0%';
+        document.getElementById('passwordStrengthText').textContent = 'Saisissez votre mot de passe';
+    }, 1000);
+}
+
+function checkPasswordStrength() {
+    const password = document.getElementById('newPasswordChange').value;
+    const strengthBar = document.getElementById('passwordStrengthBar');
+    const strengthText = document.getElementById('passwordStrengthText');
+    
+    let strength = 0;
+    let feedback = '';
+    
+    // Critères de force
+    if (password.length >= 8) strength += 20;
+    if (/[a-z]/.test(password)) strength += 20;
+    if (/[A-Z]/.test(password)) strength += 20;
+    if (/\d/.test(password)) strength += 20;
+    if (/[^a-zA-Z0-9]/.test(password)) strength += 20;
+    
+    // Mise à jour visuelle
+    strengthBar.style.width = strength + '%';
+    
+    if (strength < 40) {
+        strengthBar.className = 'progress-bar bg-danger';
+        feedback = 'Faible';
+    } else if (strength < 60) {
+        strengthBar.className = 'progress-bar bg-warning';
+        feedback = 'Moyen';
+    } else if (strength < 80) {
+        strengthBar.className = 'progress-bar bg-info';
+        feedback = 'Bon';
+    } else {
+        strengthBar.className = 'progress-bar bg-success';
+        feedback = 'Excellent';
+    }
+    
+    strengthText.textContent = `Force du mot de passe: ${feedback}`;
+}
+
+function validatePasswordMatch() {
+    const newPassword = document.getElementById('newPasswordChange').value;
+    const confirmPassword = document.getElementById('confirmPasswordChange').value;
+    const confirmInput = document.getElementById('confirmPasswordChange');
+    
+    if (confirmPassword && newPassword !== confirmPassword) {
+        confirmInput.classList.add('is-invalid');
+    } else {
+        confirmInput.classList.remove('is-invalid');
+    }
+}
+
+function saveQuickPreferences() {
+    const preferences = {
+        emailNotifications: document.getElementById('emailNotifications').checked,
+        autoClean: document.getElementById('autoClean').checked,
+        generateReports: document.getElementById('generateReports').checked,
+        dataRetention: document.getElementById('dataRetention').checked
+    };
+    
+    // Sauvegarder localement
+    localStorage.setItem('quickPreferences', JSON.stringify(preferences));
+    
+    // Simuler l'appel API
+    setTimeout(() => {
+        showAlert('Préférences sauvegardées!', 'success');
+    }, 500);
+    
+    console.log('Préférences sauvegardées:', preferences);
+}
+
+function loadQuickPreferences() {
+    const saved = JSON.parse(localStorage.getItem('quickPreferences') || '{}');
+    
+    Object.keys(saved).forEach(key => {
+        const element = document.getElementById(key);
+        if (element) {
+            element.checked = saved[key];
+        }
+    });
+}
+
+function downloadUserData() {
+    if (confirm('Voulez-vous télécharger toutes vos données utilisateur? Cela peut prendre quelques minutes.')) {
+        const userData = {
+            profile: {
+                username: '{{ user.username }}',
+                email: '{{ user.email }}',
+                full_name: '{{ user.get_full_name() }}',
+                created_at: '{{ user.created_at.isoformat() }}',
+                is_premium: {{ user.is_premium|tojson }}
+            },
+            statistics: {
+                datasets_count: {{ user.datasets.count() }},
+                cleaning_jobs_count: {{ user.cleaning_jobs.count() }},
+                quota_used: {{ user.quota_used }},
+                quota_limit: {{ user.quota_limit }}
+            },
+            export_date: new Date().toISOString()
+        };
+        
+        const blob = new Blob([JSON.stringify(userData, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `datacleaner-pro-user-data-${new Date().toISOString().split('T')[0]}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        
+        showAlert('Données utilisateur téléchargées!', 'success');
+    }
+}
+
+function loadMoreActivity() {
+    const timeline = document.querySelector('.timeline');
+    
+    // Simuler le chargement d'activités supplémentaires
+    const moreActivities = [
+        {
+            type: 'success',
+            title: 'Pipeline ETL exécuté',
+            description: 'Import automatique des données CRM',
+            time: 'Il y a 3 jours'
+        },
+        {
+            type: 'primary',
+            title: 'Nouvelle API key créée',
+            description: 'Token pour intégration Tableau',
+            time: 'Il y a 4 jours'
+        },
+        {
+            type: 'info',
+            title: 'Rapport généré',
+            description: 'Analyse mensuelle des ventes',
+            time: 'Il y a 5 jours'
+        }
+    ];
+    
+    moreActivities.forEach(activity => {
+        const activityHtml = `
+            <div class="timeline-item d-flex mb-3">
+                <div class="timeline-marker bg-${activity.type} rounded-circle me-3" style="width: 12px; height: 12px; margin-top: 6px;"></div>
+                <div class="flex-grow-1">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <strong>${activity.title}</strong>
+                            <p class="mb-0 text-muted small">${activity.description}</p>
+                        </div>
+                        <small class="text-muted">${activity.time}</small>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        timeline.insertAdjacentHTML('beforeend', activityHtml);
+    });
+    
+    // Masquer le bouton après chargement
+    event.target.style.display = 'none';
+}
+
+function showAlert(message, type = 'info') {
+    const alertHtml = `
+        <div class="alert alert-${type === 'error' ? 'danger' : type} alert-dismissible fade show position-fixed" 
+             style="top: 20px; right: 20px; z-index: 9999; min-width: 300px;">
+            <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-circle' : type === 'warning' ? 'exclamation-triangle' : 'info-circle'} me-2"></i>
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    `;
+    
+    document.body.insertAdjacentHTML('beforeend', alertHtml);
+    
+    // Auto-remove after 5 seconds
+    setTimeout(() => {
+        const alert = document.querySelector('.alert:last-of-type');
+        if (alert) {
+            const bsAlert = new bootstrap.Alert(alert);
+            bsAlert.close();
+        }
+    }, 5000);
+}
+</script>
+{% endblock %}

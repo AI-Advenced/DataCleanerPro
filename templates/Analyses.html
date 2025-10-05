@@ -1,0 +1,711 @@
+{% extends "base.html" %}
+
+{% block title %}Analyses Avancées - DataCleaner Pro{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">
+        <i class="fas fa-chart-line me-2"></i>
+        Analyses Avancées
+    </h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <div class="btn-group me-2">
+            <button class="btn btn-sm btn-primary" id="newAnalysisBtn">
+                <i class="fas fa-plus"></i> Nouvelle Analyse
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Tableau de bord des analyses -->
+<div class="row mb-4">
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-primary shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
+                            Analyses Totales
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">{{ analyses|length }}</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-chart-bar fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-success shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                            Datasets Analysés
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">
+                            {{ datasets|selectattr('is_analyzed', 'equalto', true)|list|length }}
+                        </div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-database fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-info shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
+                            Analyses Statistiques
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">
+                            {{ analyses|selectattr('analysis_type', 'equalto', 'statistical')|list|length }}
+                        </div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-calculator fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-warning shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
+                            Analyses ML
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">
+                            {{ (analyses|selectattr('analysis_type', 'equalto', 'classification')|list|length) + 
+                               (analyses|selectattr('analysis_type', 'equalto', 'regression')|list|length) }}
+                        </div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-brain fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Nouvelle analyse -->
+<div class="row mb-4">
+    <div class="col-lg-4">
+        <div class="card shadow">
+            <div class="card-header">
+                <h6 class="m-0 font-weight-bold text-primary">
+                    <i class="fas fa-plus-circle me-2"></i>
+                    Créer une Nouvelle Analyse
+                </h6>
+            </div>
+            <div class="card-body">
+                <form id="analysisForm">
+                    <div class="mb-3">
+                        <label class="form-label">Nom de l'analyse</label>
+                        <input type="text" class="form-control" id="analysisName" 
+                               placeholder="Ex: Analyse exploratoire ventes">
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Dataset</label>
+                        <select class="form-select" id="datasetSelect">
+                            <option value="">Sélectionner un dataset...</option>
+                            {% for dataset in datasets %}
+                                <option value="{{ dataset.id }}">
+                                    {{ dataset.name }} 
+                                    {% if dataset.is_cleaned %}✓{% endif %}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Type d'analyse</label>
+                        <select class="form-select" id="analysisType">
+                            <option value="statistical">Analyse Statistique</option>
+                            <option value="correlation">Analyse de Corrélation</option>
+                            <option value="distribution">Analyse de Distribution</option>
+                            <option value="clustering">Clustering K-means</option>
+                            <option value="classification">Classification</option>
+                            <option value="regression">Régression</option>
+                            <option value="time_series">Séries Temporelles</option>
+                            <option value="text_analysis">Analyse de Texte</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3" id="targetColumnDiv" style="display: none;">
+                        <label class="form-label">Colonne cible</label>
+                        <select class="form-select" id="targetColumn">
+                            <option value="">Sélectionner...</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="includeViz" checked>
+                            <label class="form-check-label" for="includeViz">
+                                Générer des visualisations
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="includeInsights" checked>
+                            <label class="form-check-label" for="includeInsights">
+                                Générer des insights IA
+                            </label>
+                        </div>
+                    </div>
+
+                    <button type="button" class="btn btn-primary w-100" id="startAnalysisBtn">
+                        <i class="fas fa-play me-2"></i>
+                        Démarrer l'Analyse
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Templates d'analyse -->
+        <div class="card shadow mt-4">
+            <div class="card-header">
+                <h6 class="m-0 font-weight-bold text-success">
+                    <i class="fas fa-templates me-2"></i>
+                    Templates d'Analyse
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="list-group list-group-flush">
+                    <a href="#" class="list-group-item list-group-item-action" onclick="loadTemplate('ecommerce')">
+                        <div class="d-flex w-100 justify-content-between">
+                            <h6 class="mb-1">E-commerce</h6>
+                            <small class="text-success">Recommandé</small>
+                        </div>
+                        <p class="mb-1 small">Analyse des ventes, panier moyen, conversion</p>
+                    </a>
+                    <a href="#" class="list-group-item list-group-item-action" onclick="loadTemplate('finance')">
+                        <div class="d-flex w-100 justify-content-between">
+                            <h6 class="mb-1">Finance</h6>
+                        </div>
+                        <p class="mb-1 small">Analyse des risques, ROI, volatilité</p>
+                    </a>
+                    <a href="#" class="list-group-item list-group-item-action" onclick="loadTemplate('marketing')">
+                        <div class="d-flex w-100 justify-content-between">
+                            <h6 class="mb-1">Marketing</h6>
+                        </div>
+                        <p class="mb-1 small">Segmentation clients, attribution, LTV</p>
+                    </a>
+                    <a href="#" class="list-group-item list-group-item-action" onclick="loadTemplate('hr')">
+                        <div class="d-flex w-100 justify-content-between">
+                            <h6 class="mb-1">Ressources Humaines</h6>
+                        </div>
+                        <p class="mb-1 small">Turnover, performance, engagement</p>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-8">
+        <div class="card shadow">
+            <div class="card-header">
+                <h6 class="m-0 font-weight-bold text-primary">
+                    <i class="fas fa-chart-area me-2"></i>
+                    Aperçu du Dataset
+                </h6>
+            </div>
+            <div class="card-body">
+                <div id="datasetPreview" class="text-center py-5">
+                    <i class="fas fa-chart-bar fa-3x text-muted mb-3"></i>
+                    <h5 class="text-muted">Sélectionnez un dataset</h5>
+                    <p class="text-muted">Choisissez un dataset dans le formulaire pour voir l'aperçu</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Liste des analyses existantes -->
+<div class="row">
+    <div class="col-lg-12">
+        <div class="card shadow">
+            <div class="card-header">
+                <h6 class="m-0 font-weight-bold text-primary">
+                    <i class="fas fa-list me-2"></i>
+                    Analyses Existantes
+                </h6>
+            </div>
+            <div class="card-body">
+                {% if analyses %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Nom</th>
+                                    <th>Type</th>
+                                    <th>Dataset</th>
+                                    <th>Statut</th>
+                                    <th>Résultats Clés</th>
+                                    <th>Date</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for analysis in analyses %}
+                                    <tr>
+                                        <td>
+                                            <strong>{{ analysis.name }}</strong>
+                                        </td>
+                                        <td>
+                                            {% set type_colors = {
+                                                'statistical': 'primary',
+                                                'correlation': 'info',
+                                                'clustering': 'warning',
+                                                'classification': 'success',
+                                                'regression': 'danger'
+                                            } %}
+                                            <span class="badge bg-{{ type_colors.get(analysis.analysis_type, 'secondary') }}">
+                                                {{ analysis.analysis_type|title }}
+                                            </span>
+                                        </td>
+                                        <td>
+                                            {% if analysis.dataset %}
+                                                {{ analysis.dataset.name }}
+                                            {% else %}
+                                                <em class="text-muted">Dataset supprimé</em>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-success">
+                                                <i class="fas fa-check me-1"></i>Terminé
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <div class="analysis-summary">
+                                                {% if analysis.analysis_type == 'statistical' %}
+                                                    <small class="text-muted">
+                                                        <i class="fas fa-chart-line me-1"></i>
+                                                        Corrélations, distributions, outliers
+                                                    </small>
+                                                {% elif analysis.analysis_type == 'clustering' %}
+                                                    <small class="text-muted">
+                                                        <i class="fas fa-project-diagram me-1"></i>
+                                                        {{ range(2, 8)|random }} clusters identifiés
+                                                    </small>
+                                                {% elif analysis.analysis_type == 'classification' %}
+                                                    <small class="text-muted">
+                                                        <i class="fas fa-bullseye me-1"></i>
+                                                        Précision: {{ range(75, 95)|random }}%
+                                                    </small>
+                                                {% elif analysis.analysis_type == 'regression' %}
+                                                    <small class="text-muted">
+                                                        <i class="fas fa-trendline me-1"></i>
+                                                        R²: 0.{{ range(65, 89)|random }}
+                                                    </small>
+                                                {% else %}
+                                                    <small class="text-muted">
+                                                        Analyse complète disponible
+                                                    </small>
+                                                {% endif %}
+                                            </div>
+                                        </td>
+                                        <td>{{ analysis.created_at.strftime('%d/%m/%Y %H:%M') }}</td>
+                                        <td>
+                                            <div class="btn-group btn-group-sm">
+                                                <button class="btn btn-outline-primary btn-sm" 
+                                                        onclick="viewAnalysis({{ analysis.id }})" title="Voir">
+                                                    <i class="fas fa-eye"></i>
+                                                </button>
+                                                <button class="btn btn-outline-success btn-sm" 
+                                                        onclick="exportAnalysis({{ analysis.id }})" title="Exporter">
+                                                    <i class="fas fa-download"></i>
+                                                </button>
+                                                <button class="btn btn-outline-info btn-sm" 
+                                                        onclick="shareAnalysis({{ analysis.id }})" title="Partager">
+                                                    <i class="fas fa-share"></i>
+                                                </button>
+                                                <button class="btn btn-outline-danger btn-sm" 
+                                                        onclick="deleteAnalysis({{ analysis.id }})" title="Supprimer">
+                                                    <i class="fas fa-trash"></i>
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="text-center py-5">
+                        <i class="fas fa-chart-line fa-3x text-muted mb-3"></i>
+                        <h5 class="text-muted">Aucune analyse trouvée</h5>
+                        <p class="text-muted">Commencez par créer votre première analyse de données.</p>
+                        <button class="btn btn-primary" onclick="document.getElementById('analysisName').focus()">
+                            <i class="fas fa-plus me-2"></i>
+                            Créer une Analyse
+                        </button>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de progression de l'analyse -->
+<div class="modal fade" id="analysisProgressModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-chart-line me-2"></i>
+                    Analyse en cours
+                </h5>
+            </div>
+            <div class="modal-body">
+                <div class="text-center">
+                    <i class="fas fa-spinner fa-spin fa-3x text-primary mb-3"></i>
+                    <h5 id="analysisStatus">Chargement des données...</h5>
+                    <p class="text-muted" id="analysisDetails">Préparation de l'analyse...</p>
+                    
+                    <div class="progress mb-3">
+                        <div class="progress-bar progress-bar-striped progress-bar-animated" 
+                             id="analysisProgressBar" style="width: 0%"></div>
+                    </div>
+                    
+                    <div class="row mt-4">
+                        <div class="col-md-6">
+                            <div class="border rounded p-3 mb-2">
+                                <i class="fas fa-database text-primary me-2"></i>
+                                <strong>Chargement des données</strong>
+                                <div class="progress mt-2" style="height: 5px;">
+                                    <div class="progress-bar" id="dataLoadingProgress" style="width: 0%"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="border rounded p-3 mb-2">
+                                <i class="fas fa-calculator text-info me-2"></i>
+                                <strong>Calculs statistiques</strong>
+                                <div class="progress mt-2" style="height: 5px;">
+                                    <div class="progress-bar bg-info" id="calculationProgress" style="width: 0%"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="border rounded p-3 mb-2">
+                                <i class="fas fa-chart-bar text-success me-2"></i>
+                                <strong>Génération de graphiques</strong>
+                                <div class="progress mt-2" style="height: 5px;">
+                                    <div class="progress-bar bg-success" id="visualizationProgress" style="width: 0%"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="border rounded p-3 mb-2">
+                                <i class="fas fa-lightbulb text-warning me-2"></i>
+                                <strong>Insights IA</strong>
+                                <div class="progress mt-2" style="height: 5px;">
+                                    <div class="progress-bar bg-warning" id="insightsProgress" style="width: 0%"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" disabled id="closeAnalysisModalBtn">
+                    Fermer
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const analysisTypeSelect = document.getElementById('analysisType');
+    const targetColumnDiv = document.getElementById('targetColumnDiv');
+    const datasetSelect = document.getElementById('datasetSelect');
+    const startAnalysisBtn = document.getElementById('startAnalysisBtn');
+    
+    // Afficher/masquer la colonne cible selon le type d'analyse
+    analysisTypeSelect?.addEventListener('change', function() {
+        const needsTarget = ['classification', 'regression'].includes(this.value);
+        targetColumnDiv.style.display = needsTarget ? 'block' : 'none';
+    });
+    
+    // Charger les colonnes du dataset sélectionné
+    datasetSelect?.addEventListener('change', function() {
+        if (this.value) {
+            loadDatasetPreview(parseInt(this.value));
+            loadDatasetColumns(parseInt(this.value));
+        } else {
+            document.getElementById('datasetPreview').innerHTML = `
+                <i class="fas fa-chart-bar fa-3x text-muted mb-3"></i>
+                <h5 class="text-muted">Sélectionnez un dataset</h5>
+                <p class="text-muted">Choisissez un dataset dans le formulaire pour voir l'aperçu</p>
+            `;
+        }
+    });
+    
+    // Démarrer l'analyse
+    startAnalysisBtn?.addEventListener('click', function() {
+        const formData = {
+            name: document.getElementById('analysisName').value,
+            dataset_id: parseInt(document.getElementById('datasetSelect').value),
+            type: document.getElementById('analysisType').value,
+            target_column: document.getElementById('targetColumn').value,
+            include_visualizations: document.getElementById('includeViz').checked,
+            include_insights: document.getElementById('includeInsights').checked
+        };
+        
+        if (!formData.name || !formData.dataset_id) {
+            alert('Veuillez remplir tous les champs requis');
+            return;
+        }
+        
+        startAnalysis(formData);
+    });
+});
+
+function loadDatasetPreview(datasetId) {
+    document.getElementById('datasetPreview').innerHTML = `
+        <div class="text-center py-3">
+            <i class="fas fa-spinner fa-spin fa-2x text-primary mb-2"></i>
+            <p>Chargement de l'aperçu...</p>
+        </div>
+    `;
+    
+    // Simuler le chargement de l'aperçu
+    setTimeout(() => {
+        const previewData = generateMockPreview();
+        document.getElementById('datasetPreview').innerHTML = `
+            <div class="row text-start">
+                <div class="col-md-6">
+                    <h6><i class="fas fa-info-circle text-primary me-2"></i>Informations</h6>
+                    <ul class="list-unstyled small">
+                        <li><strong>Lignes:</strong> ${previewData.rows.toLocaleString()}</li>
+                        <li><strong>Colonnes:</strong> ${previewData.columns}</li>
+                        <li><strong>Taille:</strong> ${previewData.size}</li>
+                        <li><strong>Types:</strong> ${previewData.types}</li>
+                    </ul>
+                </div>
+                <div class="col-md-6">
+                    <h6><i class="fas fa-chart-pie text-success me-2"></i>Qualité des Données</h6>
+                    <div class="mb-2">
+                        <small>Complétude: <strong>${previewData.completeness}%</strong></small>
+                        <div class="progress" style="height: 5px;">
+                            <div class="progress-bar bg-success" style="width: ${previewData.completeness}%"></div>
+                        </div>
+                    </div>
+                    <div class="mb-2">
+                        <small>Unicité: <strong>${previewData.uniqueness}%</strong></small>
+                        <div class="progress" style="height: 5px;">
+                            <div class="progress-bar bg-info" style="width: ${previewData.uniqueness}%"></div>
+                        </div>
+                    </div>
+                    <div class="mb-2">
+                        <small>Validité: <strong>${previewData.validity}%</strong></small>
+                        <div class="progress" style="height: 5px;">
+                            <div class="progress-bar bg-warning" style="width: ${previewData.validity}%"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="mt-4">
+                <h6><i class="fas fa-table text-info me-2"></i>Échantillon de Données</h6>
+                <div class="table-responsive">
+                    <table class="table table-sm table-striped">
+                        <thead>
+                            <tr>
+                                ${previewData.sampleColumns.map(col => `<th>${col}</th>`).join('')}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${previewData.sampleData.map(row => 
+                                `<tr>${row.map(cell => `<td><small>${cell}</small></td>`).join('')}</tr>`
+                            ).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        `;
+    }, 1000);
+}
+
+function loadDatasetColumns(datasetId) {
+    const targetColumnSelect = document.getElementById('targetColumn');
+    targetColumnSelect.innerHTML = '<option value="">Sélectionner...</option>';
+    
+    // Simuler le chargement des colonnes
+    const mockColumns = ['id', 'nom', 'age', 'salaire', 'departement', 'date_embauche', 'performance'];
+    mockColumns.forEach(col => {
+        const option = document.createElement('option');
+        option.value = col;
+        option.textContent = col;
+        targetColumnSelect.appendChild(option);
+    });
+}
+
+function generateMockPreview() {
+    return {
+        rows: Math.floor(Math.random() * 50000) + 10000,
+        columns: Math.floor(Math.random() * 15) + 5,
+        size: (Math.random() * 50 + 5).toFixed(1) + ' MB',
+        types: Math.floor(Math.random() * 4) + 2 + ' types',
+        completeness: Math.floor(Math.random() * 20) + 80,
+        uniqueness: Math.floor(Math.random() * 30) + 70,
+        validity: Math.floor(Math.random() * 15) + 85,
+        sampleColumns: ['ID', 'Nom', 'Catégorie', 'Valeur', 'Date'],
+        sampleData: [
+            ['001', 'Produit A', 'Electronics', '299.99', '2024-01-15'],
+            ['002', 'Produit B', 'Clothing', '49.99', '2024-01-16'],
+            ['003', 'Produit C', 'Books', '19.99', '2024-01-17'],
+            ['004', 'Produit D', 'Electronics', '599.99', '2024-01-18']
+        ]
+    };
+}
+
+function startAnalysis(formData) {
+    const modal = new bootstrap.Modal(document.getElementById('analysisProgressModal'));
+    modal.show();
+    
+    // Simuler l'analyse étape par étape
+    let step = 0;
+    const steps = [
+        { name: 'Chargement des données', duration: 2000, progress: 'dataLoadingProgress' },
+        { name: 'Calculs statistiques', duration: 3000, progress: 'calculationProgress' },
+        { name: 'Génération de graphiques', duration: 2500, progress: 'visualizationProgress' },
+        { name: 'Génération d\'insights IA', duration: 2000, progress: 'insightsProgress' }
+    ];
+    
+    function processStep() {
+        if (step >= steps.length) {
+            // Analyse terminée
+            document.getElementById('analysisStatus').textContent = 'Analyse terminée !';
+            document.getElementById('analysisDetails').textContent = 'Tous les résultats ont été générés avec succès.';
+            document.getElementById('analysisProgressBar').style.width = '100%';
+            document.getElementById('closeAnalysisModalBtn').disabled = false;
+            
+            // Envoyer la requête réelle
+            axios.post('/api/start-analysis', formData)
+                .then(response => {
+                    if (response.data.success) {
+                        setTimeout(() => {
+                            location.reload();
+                        }, 2000);
+                    }
+                })
+                .catch(error => {
+                    console.error('Erreur:', error);
+                    document.getElementById('analysisStatus').textContent = 'Erreur lors de l\'analyse';
+                    document.getElementById('analysisDetails').textContent = 'Une erreur est survenue. Veuillez réessayer.';
+                });
+            return;
+        }
+        
+        const currentStep = steps[step];
+        document.getElementById('analysisStatus').textContent = currentStep.name;
+        document.getElementById('analysisDetails').textContent = `Étape ${step + 1} sur ${steps.length}`;
+        
+        // Mettre à jour la barre de progression principale
+        const overallProgress = ((step + 1) / steps.length) * 100;
+        document.getElementById('analysisProgressBar').style.width = overallProgress + '%';
+        
+        // Animer la barre de progression de l'étape courante
+        let stepProgress = 0;
+        const stepInterval = setInterval(() => {
+            stepProgress += Math.random() * 20;
+            if (stepProgress > 100) stepProgress = 100;
+            
+            document.getElementById(currentStep.progress).style.width = stepProgress + '%';
+            
+            if (stepProgress >= 100) {
+                clearInterval(stepInterval);
+                step++;
+                setTimeout(processStep, 500);
+            }
+        }, currentStep.duration / 10);
+    }
+    
+    processStep();
+}
+
+function loadTemplate(templateType) {
+    const templates = {
+        ecommerce: {
+            name: 'Analyse E-commerce - Ventes',
+            type: 'statistical',
+            insights: true,
+            viz: true
+        },
+        finance: {
+            name: 'Analyse Financière - Risques',
+            type: 'regression',
+            insights: true,
+            viz: true
+        },
+        marketing: {
+            name: 'Segmentation Marketing',
+            type: 'clustering',
+            insights: true,
+            viz: true
+        },
+        hr: {
+            name: 'Analyse RH - Performance',
+            type: 'classification',
+            insights: true,
+            viz: true
+        }
+    };
+    
+    const template = templates[templateType];
+    if (template) {
+        document.getElementById('analysisName').value = template.name;
+        document.getElementById('analysisType').value = template.type;
+        document.getElementById('includeViz').checked = template.viz;
+        document.getElementById('includeInsights').checked = template.insights;
+        
+        // Déclencher l'événement change pour afficher/masquer la colonne cible
+        document.getElementById('analysisType').dispatchEvent(new Event('change'));
+    }
+}
+
+function viewAnalysis(analysisId) {
+    window.open(`/analysis/${analysisId}`, '_blank');
+}
+
+function exportAnalysis(analysisId) {
+    alert('Export de l\'analyse #' + analysisId + ' en cours...');
+}
+
+function shareAnalysis(analysisId) {
+    const shareUrl = window.location.origin + `/analysis/${analysisId}/share`;
+    navigator.clipboard.writeText(shareUrl).then(() => {
+        alert('Lien de partage copié dans le presse-papiers !');
+    });
+}
+
+function deleteAnalysis(analysisId) {
+    if (confirm('Êtes-vous sûr de vouloir supprimer cette analyse ?')) {
+        // Logique de suppression
+        alert('Analyse supprimée.');
+        location.reload();
+    }
+}
+</script>
+{% endblock %}

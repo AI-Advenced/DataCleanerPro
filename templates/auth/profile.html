@@ -1,0 +1,690 @@
+{% extends "base.html" %}
+
+{% block title %}Mon Profil - DataCleaner-Pro{% endblock %}
+
+{% block guest_content %}
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-user-cog me-2"></i>Informations Personnelles
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" id="profileForm">
+                    {{ form.hidden_tag() }}
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            {{ form.first_name.label(class="form-label fw-bold") }}
+                            {{ form.first_name(class="form-control") }}
+                            {% if form.first_name.errors %}
+                                <div class="text-danger mt-1">
+                                    {% for error in form.first_name.errors %}
+                                        <small>{{ error }}</small>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6">
+                            {{ form.last_name.label(class="form-label fw-bold") }}
+                            {{ form.last_name(class="form-control") }}
+                            {% if form.last_name.errors %}
+                                <div class="text-danger mt-1">
+                                    {% for error in form.last_name.errors %}
+                                        <small>{{ error }}</small>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        {{ form.email.label(class="form-label fw-bold") }}
+                        <div class="input-group">
+                            {{ form.email(class="form-control") }}
+                            <span class="input-group-text">
+                                {% if current_user.email_confirmed %}
+                                    <i class="fas fa-check-circle text-success" title="Email vérifié"></i>
+                                {% else %}
+                                    <i class="fas fa-exclamation-triangle text-warning" title="Email non vérifié"></i>
+                                {% endif %}
+                            </span>
+                        </div>
+                        {% if form.email.errors %}
+                            <div class="text-danger mt-1">
+                                {% for error in form.email.errors %}
+                                    <small>{{ error }}</small>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                        {% if not current_user.email_confirmed %}
+                            <small class="text-warning">
+                                <i class="fas fa-exclamation-triangle me-1"></i>
+                                Email non vérifié. <a href="#" onclick="sendVerificationEmail()" class="text-decoration-none">Renvoyer le lien</a>
+                            </small>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="mb-3">
+                        {{ form.default_cleaning_mode.label(class="form-label fw-bold") }}
+                        {{ form.default_cleaning_mode(class="form-select") }}
+                        <small class="form-text text-muted">
+                            Mode utilisé par défaut lors du nettoyage de nouveaux datasets
+                        </small>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <div class="form-check">
+                            {{ form.auto_analysis_enabled(class="form-check-input") }}
+                            {{ form.auto_analysis_enabled.label(class="form-check-label") }}
+                        </div>
+                        <small class="form-text text-muted">
+                            Lance automatiquement une analyse après le nettoyage des données
+                        </small>
+                    </div>
+                    
+                    <div class="d-flex justify-content-between">
+                        <a href="{{ url_for('main.change_password') }}" class="btn btn-outline-warning">
+                            <i class="fas fa-lock me-2"></i>Changer le mot de passe
+                        </a>
+                        {{ form.submit(class="btn btn-primary", id="saveBtn") }}
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <!-- Section Notifications -->
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-bell me-2"></i>Préférences de Notification
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6>Email</h6>
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="checkbox" id="emailCleaning" checked>
+                            <label class="form-check-label" for="emailCleaning">
+                                Fin de nettoyage
+                            </label>
+                        </div>
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="checkbox" id="emailAnalysis" checked>
+                            <label class="form-check-label" for="emailAnalysis">
+                                Analyses terminées
+                            </label>
+                        </div>
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="checkbox" id="emailWeekly">
+                            <label class="form-check-label" for="emailWeekly">
+                                Rapport hebdomadaire
+                            </label>
+                        </div>
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="checkbox" id="emailQuota">
+                            <label class="form-check-label" for="emailQuota">
+                                Alertes quota
+                            </label>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>Navigateur</h6>
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="checkbox" id="browserTasks" checked>
+                            <label class="form-check-label" for="browserTasks">
+                                Tâches terminées
+                            </label>
+                        </div>
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="checkbox" id="browserErrors" checked>
+                            <label class="form-check-label" for="browserErrors">
+                                Erreurs critiques
+                            </label>
+                        </div>
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="checkbox" id="browserTips">
+                            <label class="form-check-label" for="browserTips">
+                                Conseils et astuces
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                <div class="mt-3">
+                    <button type="button" class="btn btn-outline-primary" onclick="saveNotificationSettings()">
+                        <i class="fas fa-save me-2"></i>Sauvegarder les préférences
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Section Sécurité -->
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-shield-alt me-2"></i>Sécurité
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6>Connexions récentes</h6>
+                        <div class="list-group list-group-flush">
+                            <div class="list-group-item px-0 py-2 d-flex justify-content-between align-items-center">
+                                <div>
+                                    <i class="fas fa-desktop text-primary me-2"></i>
+                                    <span>Ordinateur de bureau</span>
+                                    <br><small class="text-muted">Chrome • {{ format_datetime_global(current_user.last_login) }}</small>
+                                </div>
+                                <span class="badge bg-success">Actuelle</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>Actions de sécurité</h6>
+                        <div class="d-grid gap-2">
+                            <button type="button" class="btn btn-outline-warning btn-sm" onclick="logoutAllDevices()">
+                                <i class="fas fa-sign-out-alt me-2"></i>Déconnecter tous les appareils
+                            </button>
+                            <button type="button" class="btn btn-outline-info btn-sm" onclick="downloadData()">
+                                <i class="fas fa-download me-2"></i>Télécharger mes données
+                            </button>
+                            <button type="button" class="btn btn-outline-danger btn-sm" onclick="deleteAccount()">
+                                <i class="fas fa-user-times me-2"></i>Supprimer le compte
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Panneau de droite -->
+    <div class="col-md-4">
+        <!-- Photo de profil -->
+        <div class="card">
+            <div class="card-body text-center">
+                <div class="profile-avatar mb-3">
+                    <div class="avatar-circle">
+                        {{ current_user.first_name[0] }}{{ current_user.last_name[0] }}
+                    </div>
+                </div>
+                <h5>{{ current_user.get_full_name() }}</h5>
+                <p class="text-muted mb-3">{{ current_user.email }}</p>
+                
+                <!-- Badges de statut -->
+                <div class="mb-3">
+                    {% if current_user.is_premium %}
+                        <span class="badge bg-warning me-1">
+                            <i class="fas fa-crown me-1"></i>Premium
+                        </span>
+                    {% else %}
+                        <span class="badge bg-secondary me-1">
+                            <i class="fas fa-user me-1"></i>Gratuit
+                        </span>
+                    {% endif %}
+                    
+                    {% if current_user.is_admin %}
+                        <span class="badge bg-danger">
+                            <i class="fas fa-shield-alt me-1"></i>Admin
+                        </span>
+                    {% endif %}
+                </div>
+                
+                <button type="button" class="btn btn-outline-primary" onclick="changeAvatar()">
+                    <i class="fas fa-camera me-2"></i>Changer la photo
+                </button>
+            </div>
+        </div>
+        
+        <!-- Statistiques du compte -->
+        <div class="card mt-4">
+            <div class="card-header">
+                <h6 class="mb-0">
+                    <i class="fas fa-chart-pie me-2"></i>Statistiques du Compte
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="row text-center mb-3">
+                    <div class="col-6">
+                        <h4 class="text-primary mb-0">{{ current_user.datasets.count() }}</h4>
+                        <small class="text-muted">Datasets</small>
+                    </div>
+                    <div class="col-6">
+                        <h4 class="text-success mb-0">{{ current_user.cleaning_jobs.count() }}</h4>
+                        <small class="text-muted">Analyses</small>
+                    </div>
+                </div>
+                
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        <small class="text-muted">Quota utilisé</small>
+                        <small class="fw-bold">{{ "%.1f"|format(current_user.quota_used) }}/{{ current_user.quota_limit }} MB</small>
+                    </div>
+                    <div class="progress" style="height: 8px;">
+                        <div class="progress-bar 
+                                   {% if current_user.get_quota_percentage() > 90 %}bg-danger
+                                   {% elif current_user.get_quota_percentage() > 70 %}bg-warning
+                                   {% else %}bg-success{% endif %}" 
+                             style="width: {{ current_user.get_quota_percentage() }}%"></div>
+                    </div>
+                </div>
+                
+                <small class="text-muted">
+                    <i class="fas fa-calendar me-1"></i>
+                    Membre depuis {{ current_user.created_at.strftime('%B %Y') }}
+                </small>
+            </div>
+        </div>
+        
+        <!-- Upgrade Premium -->
+        {% if not current_user.is_premium %}
+        <div class="card mt-4 border-warning">
+            <div class="card-body text-center">
+                <i class="fas fa-crown text-warning fa-2x mb-3"></i>
+                <h6>Passez Premium !</h6>
+                <p class="small text-muted mb-3">
+                    Débloquez toutes les fonctionnalités avancées et augmentez votre quota.
+                </p>
+                <div class="d-grid">
+                    <button type="button" class="btn btn-warning" onclick="upgradeToPremium()">
+                        <i class="fas fa-arrow-up me-2"></i>Upgrade
+                    </button>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+        
+        <!-- Tokens API -->
+        <div class="card mt-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h6 class="mb-0">
+                    <i class="fas fa-key me-2"></i>Tokens API
+                </h6>
+                <button type="button" class="btn btn-sm btn-outline-primary" onclick="createAPIToken()">
+                    <i class="fas fa-plus"></i>
+                </button>
+            </div>
+            <div class="card-body">
+                <div id="apiTokensList">
+                    {% if current_user.api_tokens.count() > 0 %}
+                        {% for token in current_user.api_tokens %}
+                        <div class="d-flex justify-content-between align-items-center mb-2 p-2 border rounded">
+                            <div>
+                                <strong>{{ token.name }}</strong>
+                                <br><small class="text-muted">
+                                    Créé {{ format_datetime_global(token.created_at) }}
+                                    {% if token.last_used %}
+                                        • Utilisé {{ format_datetime_global(token.last_used) }}
+                                    {% endif %}
+                                </small>
+                            </div>
+                            <div class="btn-group btn-group-sm" role="group">
+                                <button type="button" class="btn btn-outline-secondary" onclick="viewToken({{ token.id }})">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                                <button type="button" class="btn btn-outline-danger" onclick="revokeToken({{ token.id }})">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="text-center py-3">
+                            <i class="fas fa-key text-muted fa-2x mb-2"></i>
+                            <p class="text-muted mb-0">Aucun token API</p>
+                            <small class="text-muted">Créez-en un pour utiliser l'API</small>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Gestion du formulaire de profil
+document.getElementById('profileForm').addEventListener('submit', function(e) {
+    const saveBtn = document.getElementById('saveBtn');
+    const originalContent = saveBtn.innerHTML;
+    
+    saveBtn.innerHTML = '<span class="loading-spinner me-2"></span>Sauvegarde...';
+    saveBtn.disabled = true;
+    
+    // Le formulaire sera soumis normalement, mais on peut ajouter des validations ici
+});
+
+function sendVerificationEmail() {
+    const btn = event.target;
+    const originalText = btn.textContent;
+    btn.textContent = 'Envoi...';
+    btn.style.pointerEvents = 'none';
+    
+    fetch('/api/v1/auth/send-verification', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': document.querySelector('meta[name=csrf-token]').getAttribute('content')
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            btn.textContent = 'Email envoyé !';
+            btn.style.color = 'green';
+        } else {
+            btn.textContent = 'Erreur';
+            btn.style.color = 'red';
+        }
+        
+        setTimeout(() => {
+            btn.textContent = originalText;
+            btn.style.color = '';
+            btn.style.pointerEvents = 'auto';
+        }, 3000);
+    })
+    .catch(error => {
+        console.error('Erreur:', error);
+        btn.textContent = 'Erreur';
+        btn.style.color = 'red';
+        
+        setTimeout(() => {
+            btn.textContent = originalText;
+            btn.style.color = '';
+            btn.style.pointerEvents = 'auto';
+        }, 3000);
+    });
+}
+
+function saveNotificationSettings() {
+    const settings = {
+        email_cleaning: document.getElementById('emailCleaning').checked,
+        email_analysis: document.getElementById('emailAnalysis').checked,
+        email_weekly: document.getElementById('emailWeekly').checked,
+        email_quota: document.getElementById('emailQuota').checked,
+        browser_tasks: document.getElementById('browserTasks').checked,
+        browser_errors: document.getElementById('browserErrors').checked,
+        browser_tips: document.getElementById('browserTips').checked
+    };
+    
+    const btn = event.target;
+    const originalContent = btn.innerHTML;
+    btn.innerHTML = '<span class="loading-spinner me-2"></span>Sauvegarde...';
+    btn.disabled = true;
+    
+    fetch('/api/v1/user/notification-settings', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': document.querySelector('meta[name=csrf-token]').getAttribute('content')
+        },
+        body: JSON.stringify(settings)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            btn.innerHTML = '<i class="fas fa-check me-2"></i>Sauvegardé !';
+            btn.classList.replace('btn-outline-primary', 'btn-success');
+        } else {
+            btn.innerHTML = '<i class="fas fa-times me-2"></i>Erreur';
+            btn.classList.replace('btn-outline-primary', 'btn-danger');
+        }
+        
+        setTimeout(() => {
+            btn.innerHTML = originalContent;
+            btn.className = 'btn btn-outline-primary';
+            btn.disabled = false;
+        }, 3000);
+    })
+    .catch(error => {
+        console.error('Erreur:', error);
+        btn.innerHTML = '<i class="fas fa-times me-2"></i>Erreur';
+        btn.classList.replace('btn-outline-primary', 'btn-danger');
+        
+        setTimeout(() => {
+            btn.innerHTML = originalContent;
+            btn.className = 'btn btn-outline-primary';
+            btn.disabled = false;
+        }, 3000);
+    });
+}
+
+function changeAvatar() {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.onchange = function(e) {
+        const file = e.target.files[0];
+        if (file) {
+            const formData = new FormData();
+            formData.append('avatar', file);
+            
+            fetch('/api/v1/user/avatar', {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': document.querySelector('meta[name=csrf-token]').getAttribute('content')
+                },
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    location.reload();
+                } else {
+                    alert('Erreur: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Erreur:', error);
+                alert('Erreur lors du téléchargement');
+            });
+        }
+    };
+    input.click();
+}
+
+function logoutAllDevices() {
+    if (confirm('Voulez-vous vous déconnecter de tous les appareils ? Vous devrez vous reconnecter partout.')) {
+        fetch('/api/v1/auth/logout-all', {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': document.querySelector('meta[name=csrf-token]').getAttribute('content')
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('Déconnexion effectuée sur tous les appareils');
+                window.location.href = '/auth/login';
+            } else {
+                alert('Erreur: ' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Erreur:', error);
+            alert('Erreur lors de la déconnexion');
+        });
+    }
+}
+
+function downloadData() {
+    if (confirm('Télécharger toutes vos données ? Cela peut prendre du temps selon la quantité de données.')) {
+        const btn = event.target;
+        const originalContent = btn.innerHTML;
+        btn.innerHTML = '<span class="loading-spinner me-2"></span>Préparation...';
+        btn.disabled = true;
+        
+        fetch('/api/v1/user/export-data', {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': document.querySelector('meta[name=csrf-token]').getAttribute('content')
+            }
+        })
+        .then(response => response.blob())
+        .then(blob => {
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `mes_donnees_${Date.now()}.zip`;
+            a.click();
+            window.URL.revokeObjectURL(url);
+        })
+        .catch(error => {
+            console.error('Erreur:', error);
+            alert('Erreur lors du téléchargement');
+        })
+        .finally(() => {
+            btn.innerHTML = originalContent;
+            btn.disabled = false;
+        });
+    }
+}
+
+function deleteAccount() {
+    const confirmation = prompt('ATTENTION: Cette action est irréversible!\n\nTapez "SUPPRIMER" pour confirmer la suppression de votre compte:');
+    
+    if (confirmation === 'SUPPRIMER') {
+        fetch('/api/v1/user/delete-account', {
+            method: 'DELETE',
+            headers: {
+                'X-CSRFToken': document.querySelector('meta[name=csrf-token]').getAttribute('content')
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('Votre compte a été supprimé. Vous allez être redirigé.');
+                window.location.href = '/';
+            } else {
+                alert('Erreur: ' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Erreur:', error);
+            alert('Erreur lors de la suppression');
+        });
+    } else if (confirmation !== null) {
+        alert('Confirmation incorrecte. Suppression annulée.');
+    }
+}
+
+function upgradeToPremium() {
+    window.location.href = '/pricing?upgrade=true';
+}
+
+function createAPIToken() {
+    const name = prompt('Nom du token API:');
+    if (name) {
+        fetch('/api/v1/tokens', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector('meta[name=csrf-token]').getAttribute('content')
+            },
+            body: JSON.stringify({ name: name })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert(`Token créé: ${data.token}\n\nCopiez-le maintenant, il ne sera plus affiché !`);
+                location.reload();
+            } else {
+                alert('Erreur: ' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Erreur:', error);
+            alert('Erreur lors de la création du token');
+        });
+    }
+}
+
+function viewToken(tokenId) {
+    // Ici, vous pourriez afficher les détails du token dans un modal
+    alert('Affichage des détails du token ID: ' + tokenId);
+}
+
+function revokeToken(tokenId) {
+    if (confirm('Voulez-vous révoquer ce token ? Cette action est irréversible.')) {
+        fetch(`/api/v1/tokens/${tokenId}`, {
+            method: 'DELETE',
+            headers: {
+                'X-CSRFToken': document.querySelector('meta[name=csrf-token]').getAttribute('content')
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert('Erreur: ' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Erreur:', error);
+            alert('Erreur lors de la révocation');
+        });
+    }
+}
+
+// Animation au chargement
+document.addEventListener('DOMContentLoaded', function() {
+    const cards = document.querySelectorAll('.card');
+    cards.forEach((card, index) => {
+        card.style.opacity = '0';
+        card.style.transform = 'translateY(20px)';
+        
+        setTimeout(() => {
+            card.style.transition = 'all 0.5s ease';
+            card.style.opacity = '1';
+            card.style.transform = 'translateY(0)';
+        }, index * 100);
+    });
+});
+</script>
+
+<style>
+.profile-avatar {
+    position: relative;
+    display: inline-block;
+}
+
+.avatar-circle {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #3498db, #2c3e50);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2rem;
+    font-weight: bold;
+    margin: 0 auto;
+}
+
+.progress {
+    border-radius: 10px;
+}
+
+.list-group-item {
+    border: none;
+    border-bottom: 1px solid #dee2e6;
+}
+
+.list-group-item:last-child {
+    border-bottom: none;
+}
+
+@media (max-width: 768px) {
+    .avatar-circle {
+        width: 60px;
+        height: 60px;
+        font-size: 1.5rem;
+    }
+}
+</style>
+{% endblock %}

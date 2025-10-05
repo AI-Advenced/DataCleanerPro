@@ -1,0 +1,581 @@
+{% extends "base.html" %}
+
+{% block title %}Mes Datasets - DataCleaner-Pro{% endblock %}
+
+{% block guest_content %}
+<div class="row mb-4">
+    <div class="col-md-8">
+        <h1 class="display-5 text-primary mb-0">
+            <i class="fas fa-table me-3"></i>
+            Mes Datasets
+        </h1>
+        <p class="lead text-muted">Gérez et analysez vos jeux de données</p>
+    </div>
+    <div class="col-md-4 text-end">
+        <a href="{{ url_for('main.upload_file') }}" class="btn btn-primary btn-lg">
+            <i class="fas fa-plus me-2"></i>
+            Nouveau Dataset
+        </a>
+    </div>
+</div>
+
+<!-- Filtres et recherche -->
+<div class="row mb-4">
+    <div class="col-md-8">
+        <form method="GET" class="row g-3 align-items-end">
+            <div class="col-md-6">
+                <label for="search" class="form-label">Rechercher</label>
+                <div class="input-group">
+                    <span class="input-group-text">
+                        <i class="fas fa-search"></i>
+                    </span>
+                    <input type="text" class="form-control" id="search" name="search" 
+                           value="{{ search }}" placeholder="Nom du dataset...">
+                </div>
+            </div>
+            <div class="col-md-4">
+                <label for="type" class="form-label">Type de fichier</label>
+                <select class="form-select" id="type" name="type">
+                    <option value="">Tous les types</option>
+                    <option value="csv" {% if file_type == 'csv' %}selected{% endif %}>CSV</option>
+                    <option value="xlsx" {% if file_type == 'xlsx' %}selected{% endif %}>Excel (xlsx)</option>
+                    <option value="xls" {% if file_type == 'xls' %}selected{% endif %}>Excel (xls)</option>
+                    <option value="json" {% if file_type == 'json' %}selected{% endif %}>JSON</option>
+                    <option value="tsv" {% if file_type == 'tsv' %}selected{% endif %}>TSV</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-outline-primary w-100">
+                    <i class="fas fa-filter me-1"></i>
+                    Filtrer
+                </button>
+            </div>
+        </form>
+    </div>
+    <div class="col-md-4">
+        <div class="d-flex justify-content-end">
+            <div class="btn-group" role="group">
+                <input type="radio" class="btn-check" name="view-mode" id="grid-view" checked>
+                <label class="btn btn-outline-secondary" for="grid-view">
+                    <i class="fas fa-th"></i>
+                </label>
+                <input type="radio" class="btn-check" name="view-mode" id="list-view">
+                <label class="btn btn-outline-secondary" for="list-view">
+                    <i class="fas fa-list"></i>
+                </label>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Statistiques rapides -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h4 class="text-primary">{{ datasets.total }}</h4>
+                <p class="mb-0 text-muted">Datasets totaux</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h4 class="text-success">
+                    {% set cleaned_count = datasets.items | selectattr('is_cleaned') | list | length %}
+                    {{ cleaned_count }}
+                </h4>
+                <p class="mb-0 text-muted">Nettoyés</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h4 class="text-info">
+                    {% set analyzed_count = datasets.items | selectattr('is_analyzed') | list | length %}
+                    {{ analyzed_count }}
+                </h4>
+                <p class="mb-0 text-muted">Analysés</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h4 class="text-warning">
+                    {% set total_size = datasets.items | sum(attribute='file_size') %}
+                    {{ format_file_size_global(total_size) }}
+                </h4>
+                <p class="mb-0 text-muted">Taille totale</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Liste des datasets -->
+{% if datasets.items %}
+    <div id="datasets-container">
+        <!-- Vue grille (par défaut) -->
+        <div id="grid-container" class="row">
+            {% for dataset in datasets.items %}
+            <div class="col-md-4 mb-4 dataset-card" data-aos="fade-up" data-aos-delay="{{ loop.index0 * 100 }}">
+                <div class="card h-100 dataset-card-hover">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <div class="d-flex align-items-center">
+                            {% if dataset.file_type == 'csv' %}
+                                <i class="fas fa-file-csv text-success me-2 fs-4"></i>
+                            {% elif dataset.file_type in ['xlsx', 'xls'] %}
+                                <i class="fas fa-file-excel text-primary me-2 fs-4"></i>
+                            {% elif dataset.file_type == 'json' %}
+                                <i class="fas fa-file-code text-info me-2 fs-4"></i>
+                            {% elif dataset.file_type == 'tsv' %}
+                                <i class="fas fa-file-alt text-warning me-2 fs-4"></i>
+                            {% else %}
+                                <i class="fas fa-file text-secondary me-2 fs-4"></i>
+                            {% endif %}
+                            <span class="badge bg-secondary">{{ dataset.file_type.upper() }}</span>
+                        </div>
+                        <div class="dropdown">
+                            <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" 
+                                    data-bs-toggle="dropdown">
+                                <i class="fas fa-ellipsis-v"></i>
+                            </button>
+                            <ul class="dropdown-menu">
+                                <li><a class="dropdown-item" href="{{ url_for('main.view_dataset', dataset_id=dataset.id) }}">
+                                    <i class="fas fa-eye me-2"></i>Voir
+                                </a></li>
+                                <li><a class="dropdown-item" href="{{ url_for('main.clean_dataset', dataset_id=dataset.id) }}">
+                                    <i class="fas fa-broom me-2"></i>Nettoyer
+                                </a></li>
+                                <li><a class="dropdown-item" href="{{ url_for('main.analyze_dataset', dataset_id=dataset.id) }}">
+                                    <i class="fas fa-chart-bar me-2"></i>Analyser
+                                </a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item" href="{{ url_for('main.export_dataset', dataset_id=dataset.id) }}?format=csv">
+                                    <i class="fas fa-download me-2"></i>Exporter CSV
+                                </a></li>
+                                <li><a class="dropdown-item" href="{{ url_for('main.export_dataset', dataset_id=dataset.id) }}?format=excel">
+                                    <i class="fas fa-download me-2"></i>Exporter Excel
+                                </a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item text-danger" href="#" data-confirm-delete>
+                                    <i class="fas fa-trash me-2"></i>Supprimer
+                                </a></li>
+                            </ul>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <h5 class="card-title text-truncate" title="{{ dataset.name }}">
+                            {{ dataset.name }}
+                        </h5>
+                        <div class="mb-3">
+                            {% if dataset.rows_count and dataset.columns_count %}
+                                <small class="text-muted">
+                                    <i class="fas fa-table me-1"></i>
+                                    {{ "{:,}".format(dataset.rows_count) }} lignes × {{ dataset.columns_count }} colonnes
+                                </small>
+                            {% endif %}
+                            <br>
+                            <small class="text-muted">
+                                <i class="fas fa-hdd me-1"></i>
+                                {{ format_file_size_global(dataset.file_size) }}
+                            </small>
+                        </div>
+                        
+                        <!-- Indicateurs de statut -->
+                        <div class="mb-3">
+                            <div class="row text-center">
+                                <div class="col-4">
+                                    {% if dataset.is_cleaned %}
+                                        <i class="fas fa-check-circle text-success fs-5" title="Nettoyé"></i>
+                                        <br><small class="text-success">Nettoyé</small>
+                                    {% else %}
+                                        <i class="fas fa-circle text-muted fs-5" title="Non nettoyé"></i>
+                                        <br><small class="text-muted">Brut</small>
+                                    {% endif %}
+                                </div>
+                                <div class="col-4">
+                                    {% if dataset.is_analyzed %}
+                                        <i class="fas fa-chart-bar text-info fs-5" title="Analysé"></i>
+                                        <br><small class="text-info">Analysé</small>
+                                    {% else %}
+                                        <i class="fas fa-chart-bar text-muted fs-5" title="Non analysé"></i>
+                                        <br><small class="text-muted">Pas d'analyse</small>
+                                    {% endif %}
+                                </div>
+                                <div class="col-4">
+                                    {% if dataset.has_duplicates %}
+                                        <i class="fas fa-exclamation-triangle text-warning fs-5" title="Doublons détectés"></i>
+                                        <br><small class="text-warning">Doublons</small>
+                                    {% else %}
+                                        <i class="fas fa-check text-success fs-5" title="Pas de doublons"></i>
+                                        <br><small class="text-success">Propre</small>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Score de qualité -->
+                        {% if dataset.statistics_summary %}
+                            {% set stats = dataset.get_statistics_summary() %}
+                            {% if stats.data_quality_score %}
+                                <div class="mb-3">
+                                    <div class="d-flex justify-content-between align-items-center mb-1">
+                                        <small class="text-muted">Qualité des données</small>
+                                        <small class="fw-bold">{{ "%.0f"|format(stats.data_quality_score) }}%</small>
+                                    </div>
+                                    <div class="progress" style="height: 6px;">
+                                        <div class="progress-bar 
+                                                   {% if stats.data_quality_score >= 80 %}bg-success
+                                                   {% elif stats.data_quality_score >= 60 %}bg-info
+                                                   {% elif stats.data_quality_score >= 40 %}bg-warning
+                                                   {% else %}bg-danger{% endif %}" 
+                                             style="width: {{ stats.data_quality_score }}%"></div>
+                                    </div>
+                                </div>
+                            {% endif %}
+                        {% endif %}
+                        
+                        <small class="text-muted">
+                            <i class="fas fa-calendar me-1"></i>
+                            Uploadé {{ format_datetime_global(dataset.upload_date) }}
+                        </small>
+                    </div>
+                    <div class="card-footer">
+                        <div class="d-grid gap-2 d-md-flex">
+                            <a href="{{ url_for('main.view_dataset', dataset_id=dataset.id) }}" 
+                               class="btn btn-primary btn-sm flex-fill">
+                                <i class="fas fa-eye me-1"></i>Voir
+                            </a>
+                            {% if not dataset.is_cleaned %}
+                                <a href="{{ url_for('main.clean_dataset', dataset_id=dataset.id) }}" 
+                                   class="btn btn-success btn-sm flex-fill">
+                                    <i class="fas fa-broom me-1"></i>Nettoyer
+                                </a>
+                            {% else %}
+                                <a href="{{ url_for('main.analyze_dataset', dataset_id=dataset.id) }}" 
+                                   class="btn btn-info btn-sm flex-fill">
+                                    <i class="fas fa-chart-bar me-1"></i>Analyser
+                                </a>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        
+        <!-- Vue liste -->
+        <div id="list-container" class="d-none">
+            <div class="card">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th>Dataset</th>
+                                <th>Type</th>
+                                <th>Taille</th>
+                                <th>Lignes</th>
+                                <th>Colonnes</th>
+                                <th>Statut</th>
+                                <th>Date</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for dataset in datasets.items %}
+                            <tr>
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        {% if dataset.file_type == 'csv' %}
+                                            <i class="fas fa-file-csv text-success me-2"></i>
+                                        {% elif dataset.file_type in ['xlsx', 'xls'] %}
+                                            <i class="fas fa-file-excel text-primary me-2"></i>
+                                        {% elif dataset.file_type == 'json' %}
+                                            <i class="fas fa-file-code text-info me-2"></i>
+                                        {% else %}
+                                            <i class="fas fa-file text-secondary me-2"></i>
+                                        {% endif %}
+                                        <div>
+                                            <strong>{{ dataset.name[:30] }}{% if dataset.name|length > 30 %}...{% endif %}</strong>
+                                            <br><small class="text-muted">{{ dataset.filename }}</small>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td><span class="badge bg-secondary">{{ dataset.file_type.upper() }}</span></td>
+                                <td>{{ format_file_size_global(dataset.file_size) }}</td>
+                                <td>{{ "{:,}".format(dataset.rows_count) if dataset.rows_count else '-' }}</td>
+                                <td>{{ dataset.columns_count if dataset.columns_count else '-' }}</td>
+                                <td>
+                                    <div class="d-flex gap-1">
+                                        {% if dataset.is_cleaned %}
+                                            <span class="badge bg-success">Nettoyé</span>
+                                        {% endif %}
+                                        {% if dataset.is_analyzed %}
+                                            <span class="badge bg-info">Analysé</span>
+                                        {% endif %}
+                                        {% if dataset.has_duplicates %}
+                                            <span class="badge bg-warning">Doublons</span>
+                                        {% endif %}
+                                        {% if not dataset.is_cleaned and not dataset.is_analyzed %}
+                                            <span class="badge bg-secondary">Brut</span>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                                <td>
+                                    <small>{{ format_datetime_global(dataset.upload_date) }}</small>
+                                </td>
+                                <td>
+                                    <div class="btn-group" role="group">
+                                        <a href="{{ url_for('main.view_dataset', dataset_id=dataset.id) }}" 
+                                           class="btn btn-sm btn-outline-primary" title="Voir">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
+                                        <a href="{{ url_for('main.clean_dataset', dataset_id=dataset.id) }}" 
+                                           class="btn btn-sm btn-outline-success" title="Nettoyer">
+                                            <i class="fas fa-broom"></i>
+                                        </a>
+                                        <a href="{{ url_for('main.analyze_dataset', dataset_id=dataset.id) }}" 
+                                           class="btn btn-sm btn-outline-info" title="Analyser">
+                                            <i class="fas fa-chart-bar"></i>
+                                        </a>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Pagination -->
+    {% if datasets.pages > 1 %}
+    <nav aria-label="Pagination datasets" class="mt-4">
+        <ul class="pagination justify-content-center">
+            {% if datasets.has_prev %}
+                <li class="page-item">
+                    <a class="page-link" href="{{ url_for('main.list_datasets', page=datasets.prev_num, search=search, type=file_type) }}">
+                        <i class="fas fa-chevron-left"></i>
+                    </a>
+                </li>
+            {% endif %}
+            
+            {% for page_num in datasets.iter_pages() %}
+                {% if page_num %}
+                    {% if page_num != datasets.page %}
+                        <li class="page-item">
+                            <a class="page-link" href="{{ url_for('main.list_datasets', page=page_num, search=search, type=file_type) }}">
+                                {{ page_num }}
+                            </a>
+                        </li>
+                    {% else %}
+                        <li class="page-item active">
+                            <span class="page-link">{{ page_num }}</span>
+                        </li>
+                    {% endif %}
+                {% else %}
+                    <li class="page-item disabled">
+                        <span class="page-link">...</span>
+                    </li>
+                {% endif %}
+            {% endfor %}
+            
+            {% if datasets.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="{{ url_for('main.list_datasets', page=datasets.next_num, search=search, type=file_type) }}">
+                        <i class="fas fa-chevron-right"></i>
+                    </a>
+                </li>
+            {% endif %}
+        </ul>
+    </nav>
+    {% endif %}
+    
+{% else %}
+    <!-- État vide -->
+    <div class="text-center py-5">
+        <div class="mb-4">
+            <i class="fas fa-folder-open fa-5x text-muted"></i>
+        </div>
+        <h3 class="text-muted mb-3">
+            {% if search or file_type %}
+                Aucun dataset correspondant
+            {% else %}
+                Aucun dataset trouvé
+            {% endif %}
+        </h3>
+        <p class="text-muted mb-4">
+            {% if search or file_type %}
+                Essayez de modifier vos critères de recherche ou
+                <a href="{{ url_for('main.list_datasets') }}" class="text-decoration-none">voir tous les datasets</a>
+            {% else %}
+                Commencez par uploader votre premier dataset pour débuter l'analyse
+            {% endif %}
+        </p>
+        <a href="{{ url_for('main.upload_file') }}" class="btn btn-primary btn-lg">
+            <i class="fas fa-plus me-2"></i>
+            Uploader un dataset
+        </a>
+    </div>
+{% endif %}
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Gestion du changement de vue
+    const gridView = document.getElementById('grid-view');
+    const listView = document.getElementById('list-view');
+    const gridContainer = document.getElementById('grid-container');
+    const listContainer = document.getElementById('list-container');
+    
+    gridView.addEventListener('change', function() {
+        if (this.checked) {
+            gridContainer.classList.remove('d-none');
+            listContainer.classList.add('d-none');
+        }
+    });
+    
+    listView.addEventListener('change', function() {
+        if (this.checked) {
+            gridContainer.classList.add('d-none');
+            listContainer.classList.remove('d-none');
+        }
+    });
+    
+    // Animation des cartes au survol
+    const datasetCards = document.querySelectorAll('.dataset-card-hover');
+    datasetCards.forEach(card => {
+        card.addEventListener('mouseenter', function() {
+            this.style.transform = 'translateY(-10px) scale(1.02)';
+            this.style.boxShadow = '0 15px 35px rgba(0,0,0,0.1)';
+        });
+        
+        card.addEventListener('mouseleave', function() {
+            this.style.transform = 'translateY(0) scale(1)';
+            this.style.boxShadow = '0 4px 15px rgba(0,0,0,0.1)';
+        });
+    });
+    
+    // Recherche en temps réel (avec debounce)
+    const searchInput = document.getElementById('search');
+    let searchTimeout;
+    
+    if (searchInput) {
+        searchInput.addEventListener('input', function() {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(() => {
+                // Auto-submit après 500ms d'inactivité
+                if (this.value.length >= 3 || this.value.length === 0) {
+                    this.form.submit();
+                }
+            }, 500);
+        });
+    }
+    
+    // Confirmation de suppression
+    document.querySelectorAll('[data-confirm-delete]').forEach(button => {
+        button.addEventListener('click', function(e) {
+            e.preventDefault();
+            if (confirm('Êtes-vous sûr de vouloir supprimer ce dataset ? Cette action est irréversible.')) {
+                // Ici, vous pourriez faire un appel AJAX pour supprimer
+                alert('Fonctionnalité de suppression à implémenter');
+            }
+        });
+    });
+    
+    // Initialisation des tooltips
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[title]'));
+    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl);
+    });
+});
+
+// Actions de masse (sélection multiple)
+function toggleAllDatasets() {
+    const checkboxes = document.querySelectorAll('.dataset-checkbox');
+    const selectAll = document.getElementById('select-all');
+    
+    checkboxes.forEach(checkbox => {
+        checkbox.checked = selectAll.checked;
+    });
+    
+    updateBulkActions();
+}
+
+function updateBulkActions() {
+    const checkboxes = document.querySelectorAll('.dataset-checkbox:checked');
+    const bulkActions = document.getElementById('bulk-actions');
+    
+    if (checkboxes.length > 0) {
+        bulkActions.classList.remove('d-none');
+        document.getElementById('selected-count').textContent = checkboxes.length;
+    } else {
+        bulkActions.classList.add('d-none');
+    }
+}
+
+// Export en masse
+function bulkExport(format) {
+    const selected = Array.from(document.querySelectorAll('.dataset-checkbox:checked'))
+                         .map(cb => cb.value);
+    
+    if (selected.length === 0) {
+        alert('Veuillez sélectionner au moins un dataset');
+        return;
+    }
+    
+    // Créer un formulaire dynamique pour l'export en masse
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = '/api/v1/datasets/bulk-export';
+    
+    const formatInput = document.createElement('input');
+    formatInput.type = 'hidden';
+    formatInput.name = 'format';
+    formatInput.value = format;
+    form.appendChild(formatInput);
+    
+    selected.forEach(id => {
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = 'dataset_ids';
+        input.value = id;
+        form.appendChild(input);
+    });
+    
+    document.body.appendChild(form);
+    form.submit();
+    document.body.removeChild(form);
+}
+</script>
+
+<style>
+.dataset-card-hover {
+    transition: all 0.3s ease;
+}
+
+.progress {
+    border-radius: 10px;
+}
+
+.card-header {
+    border-radius: 15px 15px 0 0 !important;
+}
+
+.badge {
+    font-size: 0.75em;
+}
+
+@media (max-width: 768px) {
+    .display-5 {
+        font-size: 2rem;
+    }
+    
+    .dataset-card {
+        margin-bottom: 1rem;
+    }
+}
+</style>
+{% endblock %}

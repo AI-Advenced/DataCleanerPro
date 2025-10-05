@@ -1,0 +1,649 @@
+{% extends "base.html" %}
+
+{% block title %}Trop de requêtes - DataCleaner-Pro{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center min-vh-100 align-items-center">
+        <div class="col-md-6 text-center">
+            <div class="error-illustration mb-4">
+                <div class="throttle-animation mb-4">
+                    <div class="speedometer">
+                        <div class="speedometer-circle">
+                            <div class="needle" id="needle"></div>
+                            <div class="center-dot"></div>
+                        </div>
+                        <div class="speed-marks">
+                            <div class="mark" style="--angle: 0deg;"></div>
+                            <div class="mark" style="--angle: 30deg;"></div>
+                            <div class="mark" style="--angle: 60deg;"></div>
+                            <div class="mark" style="--angle: 90deg;"></div>
+                            <div class="mark" style="--angle: 120deg;"></div>
+                            <div class="mark" style="--angle: 150deg;"></div>
+                            <div class="mark" style="--angle: 180deg;"></div>
+                        </div>
+                    </div>
+                </div>
+                
+                <h1 class="display-1 fw-bold text-warning rate-limit-glow">429</h1>
+                <h2 class="h3 text-secondary mb-3">Trop de Requêtes</h2>
+                <p class="text-muted mb-4 lead">
+                    Ralentissez ! Vous avez fait trop de requêtes trop rapidement.
+                </p>
+                
+                <!-- Compteur de cooldown -->
+                <div class="alert alert-warning bg-warning bg-opacity-10 border-warning mb-4">
+                    <div class="d-flex align-items-center justify-content-center">
+                        <i class="fas fa-clock me-3 fs-4"></i>
+                        <div>
+                            <strong>Limite de taux atteinte</strong>
+                            <div class="mt-2">
+                                <span>Réessayez dans : </span>
+                                <span class="badge bg-warning text-dark fs-6" id="countdown">60</span>
+                                <span> secondes</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Barre de progression du cooldown -->
+                <div class="mb-4">
+                    <div class="progress" style="height: 10px;">
+                        <div class="progress-bar bg-warning progress-bar-striped progress-bar-animated" 
+                             id="cooldownProgress" style="width: 100%"></div>
+                    </div>
+                    <small class="text-muted">Temps de récupération</small>
+                </div>
+            </div>
+            
+            <!-- Informations sur les limites -->
+            <div class="row mb-4">
+                <div class="col-md-6 mb-3">
+                    <div class="card h-100 border-info">
+                        <div class="card-body">
+                            <i class="fas fa-tachometer-alt text-info fa-2x mb-3"></i>
+                            <h5>Limites Actuelles</h5>
+                            <div class="text-start">
+                                {% if current_user.is_authenticated %}
+                                    {% if current_user.is_premium %}
+                                        <p class="small mb-1"><strong>Premium:</strong> 1000 req/heure</p>
+                                        <p class="small mb-1"><strong>API:</strong> 5000 req/heure</p>
+                                        <p class="small mb-0"><strong>Upload:</strong> 100 MB/fichier</p>
+                                    {% else %}
+                                        <p class="small mb-1"><strong>Gratuit:</strong> 100 req/heure</p>
+                                        <p class="small mb-1"><strong>API:</strong> 500 req/heure</p>
+                                        <p class="small mb-0"><strong>Upload:</strong> 10 MB/fichier</p>
+                                    {% endif %}
+                                {% else %}
+                                    <p class="small mb-1"><strong>Anonyme:</strong> 50 req/heure</p>
+                                    <p class="small mb-1"><strong>API:</strong> Non autorisé</p>
+                                    <p class="small mb-0"><strong>Upload:</strong> Non autorisé</p>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <div class="card h-100 border-success">
+                        <div class="card-body">
+                            <i class="fas fa-lightbulb text-success fa-2x mb-3"></i>
+                            <h5>Conseils</h5>
+                            <div class="text-start">
+                                <p class="small mb-1">• Espacez vos requêtes</p>
+                                <p class="small mb-1">• Utilisez la pagination</p>
+                                <p class="small mb-1">• Mettez en cache vos données</p>
+                                <p class="small mb-0">• Évitez les boucles rapides</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Actions -->
+            <div class="d-grid gap-2 d-md-flex justify-content-md-center mb-4">
+                <button onclick="window.location.reload()" class="btn btn-warning" id="retryBtn" disabled>
+                    <i class="fas fa-redo me-2"></i>
+                    <span id="retryText">Réessayer (60s)</span>
+                </button>
+                
+                {% if current_user.is_authenticated %}
+                    <a href="{{ url_for('main.dashboard') }}" class="btn btn-outline-primary">
+                        <i class="fas fa-tachometer-alt me-2"></i>Dashboard
+                    </a>
+                    {% if not current_user.is_premium %}
+                        <a href="/pricing" class="btn btn-success">
+                            <i class="fas fa-crown me-2"></i>Upgrade Premium
+                        </a>
+                    {% endif %}
+                {% else %}
+                    <a href="{{ url_for('auth.login') }}" class="btn btn-primary">
+                        <i class="fas fa-sign-in-alt me-2"></i>Se connecter
+                    </a>
+                {% endif %}
+            </div>
+            
+            <!-- Statistiques d'utilisation -->
+            <div class="card border-primary mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h6 class="mb-0">
+                        <i class="fas fa-chart-bar me-2"></i>Votre Utilisation
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="row text-center">
+                        <div class="col-6 col-md-3">
+                            <div class="mb-2">
+                                <i class="fas fa-clock text-primary fa-2x"></i>
+                            </div>
+                            <h6 class="text-primary" id="requestsThisHour">-</h6>
+                            <small class="text-muted">Cette heure</small>
+                        </div>
+                        <div class="col-6 col-md-3">
+                            <div class="mb-2">
+                                <i class="fas fa-calendar-day text-success fa-2x"></i>
+                            </div>
+                            <h6 class="text-success" id="requestsToday">-</h6>
+                            <small class="text-muted">Aujourd'hui</small>
+                        </div>
+                        <div class="col-6 col-md-3">
+                            <div class="mb-2">
+                                <i class="fas fa-exclamation-triangle text-warning fa-2x"></i>
+                            </div>
+                            <h6 class="text-warning" id="limitHits">-</h6>
+                            <small class="text-muted">Limites atteintes</small>
+                        </div>
+                        <div class="col-6 col-md-3">
+                            <div class="mb-2">
+                                <i class="fas fa-check-circle text-info fa-2x"></i>
+                            </div>
+                            <h6 class="text-info" id="successRate">-</h6>
+                            <small class="text-muted">Taux de succès</small>
+                        </div>
+                    </div>
+                    
+                    <!-- Graphique d'utilisation -->
+                    <div class="mt-4">
+                        <canvas id="usageChart" height="100"></canvas>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Upgrade premium -->
+            {% if current_user.is_authenticated and not current_user.is_premium %}
+            <div class="card border-warning">
+                <div class="card-body text-center">
+                    <i class="fas fa-crown text-warning fa-3x mb-3"></i>
+                    <h5>Besoin de plus de requêtes ?</h5>
+                    <p class="text-muted mb-3">
+                        Passez Premium pour obtenir des limites plus élevées et un accès prioritaire.
+                    </p>
+                    
+                    <div class="row mb-3">
+                        <div class="col-6">
+                            <div class="border rounded p-3">
+                                <h6 class="text-warning">Premium</h6>
+                                <strong class="fs-4">1000</strong>
+                                <small class="text-muted d-block">req/heure</small>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="border rounded p-3">
+                                <h6 class="text-warning">API</h6>
+                                <strong class="fs-4">5000</strong>
+                                <small class="text-muted d-block">req/heure</small>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <a href="/pricing?source=rate_limit" class="btn btn-warning btn-lg">
+                        <i class="fas fa-arrow-up me-2"></i>Upgrade Maintenant
+                    </a>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+        
+        <!-- Animation décorative -->
+        <div class="col-md-4 d-none d-lg-block">
+            <div class="text-center">
+                <div class="traffic-light mb-4">
+                    <div class="light red active" id="redLight"></div>
+                    <div class="light yellow" id="yellowLight"></div>
+                    <div class="light green" id="greenLight"></div>
+                </div>
+                
+                <div class="server-status mt-4">
+                    <div class="server-icon">
+                        <i class="fas fa-server fa-3x text-muted"></i>
+                        <div class="status-indicator busy" id="serverStatus"></div>
+                    </div>
+                    <p class="text-muted mt-3">Serveur en cours de récupération...</p>
+                </div>
+                
+                <div class="wave-animation mt-4">
+                    <div class="wave"></div>
+                    <div class="wave"></div>
+                    <div class="wave"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Variables globales
+let countdownTimer;
+let cooldownTime = 60; // 60 secondes par défaut
+let originalCooldownTime = 60;
+
+// Initialisation
+document.addEventListener('DOMContentLoaded', function() {
+    // Récupérer le temps de cooldown réel depuis le serveur si possible
+    fetchRateLimitInfo();
+    
+    // Démarrer le compteur
+    startCountdown();
+    
+    // Animer l'aiguille du speedometer
+    animateSpeedometer();
+    
+    // Charger les statistiques d'utilisation
+    loadUsageStats();
+    
+    // Animation du feu de circulation
+    startTrafficLightAnimation();
+});
+
+function fetchRateLimitInfo() {
+    fetch('/api/v1/rate-limit-info', {
+        method: 'HEAD'
+    })
+    .then(response => {
+        const retryAfter = response.headers.get('Retry-After');
+        if (retryAfter) {
+            cooldownTime = parseInt(retryAfter);
+            originalCooldownTime = cooldownTime;
+        }
+        
+        const remaining = response.headers.get('X-RateLimit-Remaining');
+        const limit = response.headers.get('X-RateLimit-Limit');
+        const reset = response.headers.get('X-RateLimit-Reset');
+        
+        if (remaining && limit) {
+            updateRateLimitDisplay(remaining, limit, reset);
+        }
+    })
+    .catch(error => {
+        console.log('Could not fetch rate limit info:', error);
+    });
+}
+
+function startCountdown() {
+    const countdownElement = document.getElementById('countdown');
+    const progressElement = document.getElementById('cooldownProgress');
+    const retryBtn = document.getElementById('retryBtn');
+    const retryText = document.getElementById('retryText');
+    const needle = document.getElementById('needle');
+    
+    countdownTimer = setInterval(() => {
+        countdownElement.textContent = cooldownTime;
+        retryText.textContent = `Réessayer (${cooldownTime}s)`;
+        
+        // Mettre à jour la barre de progression
+        const progress = ((originalCooldownTime - cooldownTime) / originalCooldownTime) * 100;
+        progressElement.style.width = (100 - progress) + '%';
+        
+        // Animer l'aiguille du speedometer
+        const angle = -90 + (progress * 1.8); // -90° à 90°
+        needle.style.transform = `rotate(${angle}deg)`;
+        
+        cooldownTime--;
+        
+        if (cooldownTime < 0) {
+            clearInterval(countdownTimer);
+            retryBtn.disabled = false;
+            retryBtn.classList.replace('btn-warning', 'btn-success');
+            retryText.textContent = 'Réessayer maintenant';
+            countdownElement.textContent = '0';
+            progressElement.style.width = '0%';
+            progressElement.classList.remove('bg-warning');
+            progressElement.classList.add('bg-success');
+            
+            // Changer le feu de circulation au vert
+            document.getElementById('redLight').classList.remove('active');
+            document.getElementById('greenLight').classList.add('active');
+            
+            // Animation de l'aiguille vers le vert
+            needle.style.transform = 'rotate(90deg)';
+        } else if (cooldownTime < 10) {
+            // Dernières 10 secondes - animation d'urgence
+            countdownElement.parentElement.classList.add('pulse-warning');
+            
+            // Feu jaune
+            if (cooldownTime === 9) {
+                document.getElementById('redLight').classList.remove('active');
+                document.getElementById('yellowLight').classList.add('active');
+            }
+        }
+    }, 1000);
+}
+
+function animateSpeedometer() {
+    const needle = document.getElementById('needle');
+    
+    // Animation initiale - aiguille dans le rouge
+    needle.style.transform = 'rotate(-45deg)';
+    
+    // Vibration périodique de l'aiguille
+    setInterval(() => {
+        if (cooldownTime > 0) {
+            needle.style.transform += ' scale(1.1)';
+            setTimeout(() => {
+                needle.style.transform = needle.style.transform.replace(' scale(1.1)', '');
+            }, 100);
+        }
+    }, 2000);
+}
+
+function loadUsageStats() {
+    // Simuler le chargement des statistiques
+    setTimeout(() => {
+        document.getElementById('requestsThisHour').textContent = '127';
+        document.getElementById('requestsToday').textContent = '1,043';
+        document.getElementById('limitHits').textContent = '3';
+        document.getElementById('successRate').textContent = '94.2%';
+        
+        // Créer un graphique d'utilisation
+        createUsageChart();
+    }, 1000);
+}
+
+function createUsageChart() {
+    const ctx = document.getElementById('usageChart').getContext('2d');
+    
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: ['12h', '13h', '14h', '15h', '16h', '17h', '18h'],
+            datasets: [{
+                label: 'Requêtes par heure',
+                data: [45, 78, 92, 120, 98, 127, 0],
+                borderColor: '#ffc107',
+                backgroundColor: 'rgba(255, 193, 7, 0.1)',
+                tension: 0.4,
+                pointBackgroundColor: '#ffc107',
+                pointBorderColor: '#fff',
+                pointBorderWidth: 2
+            }, {
+                label: 'Limite',
+                data: [100, 100, 100, 100, 100, 100, 100],
+                borderColor: '#dc3545',
+                backgroundColor: 'transparent',
+                borderDash: [5, 5],
+                pointRadius: 0
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: true,
+                    position: 'bottom'
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    max: 150
+                }
+            }
+        }
+    });
+}
+
+function startTrafficLightAnimation() {
+    const redLight = document.getElementById('redLight');
+    const yellowLight = document.getElementById('yellowLight');
+    const greenLight = document.getElementById('greenLight');
+    
+    // Commencer par le rouge actif
+    redLight.classList.add('active');
+    
+    // Animation clignotante du rouge
+    setInterval(() => {
+        if (cooldownTime > 10) {
+            redLight.style.opacity = redLight.style.opacity === '0.3' ? '1' : '0.3';
+        }
+    }, 1000);
+}
+
+function updateRateLimitDisplay(remaining, limit, reset) {
+    // Mettre à jour l'affichage avec les vraies données
+    console.log(`Rate limit: ${remaining}/${limit}, reset: ${reset}`);
+}
+
+// Fonction pour réessayer automatiquement après le cooldown
+function autoRetry() {
+    if (cooldownTime <= 0) {
+        window.location.reload();
+    }
+}
+
+// Gestion des onglets/fenêtres inactives
+document.addEventListener('visibilitychange', function() {
+    if (document.hidden) {
+        // Pause l'animation quand l'onglet n'est pas visible
+        clearInterval(countdownTimer);
+    } else {
+        // Reprendre le décompte
+        if (cooldownTime > 0) {
+            startCountdown();
+        }
+    }
+});
+</script>
+
+<style>
+.rate-limit-glow {
+    animation: warningGlow 2s ease-in-out infinite alternate;
+}
+
+@keyframes warningGlow {
+    from {
+        text-shadow: 0 0 10px #ffc107, 0 0 20px #ffc107, 0 0 30px #ffc107;
+    }
+    to {
+        text-shadow: 0 0 20px #ffc107, 0 0 30px #ffc107, 0 0 40px #ffc107;
+    }
+}
+
+.speedometer {
+    position: relative;
+    width: 200px;
+    height: 100px;
+    margin: 0 auto;
+}
+
+.speedometer-circle {
+    width: 200px;
+    height: 100px;
+    border: 8px solid #e9ecef;
+    border-bottom: none;
+    border-radius: 200px 200px 0 0;
+    position: relative;
+    background: linear-gradient(to right, #dc3545 0%, #ffc107 50%, #28a745 100%);
+    background-clip: content-box;
+}
+
+.needle {
+    position: absolute;
+    width: 3px;
+    height: 80px;
+    background: #333;
+    left: 50%;
+    bottom: 0;
+    transform-origin: bottom center;
+    transform: rotate(-90deg);
+    transition: transform 0.5s ease;
+    border-radius: 2px;
+}
+
+.center-dot {
+    position: absolute;
+    width: 12px;
+    height: 12px;
+    background: #333;
+    border-radius: 50%;
+    left: 50%;
+    bottom: -6px;
+    transform: translateX(-50%);
+}
+
+.speed-marks {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+}
+
+.mark {
+    position: absolute;
+    width: 2px;
+    height: 15px;
+    background: #333;
+    left: 50%;
+    bottom: 0;
+    transform-origin: bottom center;
+    transform: translateX(-50%) rotate(var(--angle)) translateY(-92px);
+}
+
+.traffic-light {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 15px;
+    padding: 20px;
+    background: #333;
+    border-radius: 20px;
+    width: 80px;
+    margin: 0 auto;
+}
+
+.light {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    opacity: 0.3;
+    transition: all 0.3s ease;
+}
+
+.light.red {
+    background: #dc3545;
+}
+
+.light.yellow {
+    background: #ffc107;
+}
+
+.light.green {
+    background: #28a745;
+}
+
+.light.active {
+    opacity: 1;
+    box-shadow: 0 0 20px currentColor;
+}
+
+.server-icon {
+    position: relative;
+    display: inline-block;
+}
+
+.status-indicator {
+    position: absolute;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    top: 5px;
+    right: -5px;
+    animation: pulse 2s infinite;
+}
+
+.status-indicator.busy {
+    background: #ffc107;
+}
+
+.status-indicator.ok {
+    background: #28a745;
+}
+
+.wave-animation {
+    position: relative;
+    height: 50px;
+    overflow: hidden;
+}
+
+.wave {
+    position: absolute;
+    width: 200%;
+    height: 20px;
+    background: linear-gradient(90deg, transparent, #ffc107, transparent);
+    animation: wave 3s linear infinite;
+}
+
+.wave:nth-child(2) {
+    animation-delay: -1s;
+}
+
+.wave:nth-child(3) {
+    animation-delay: -2s;
+}
+
+@keyframes wave {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(50%); }
+}
+
+@keyframes pulse {
+    0% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.2); opacity: 0.7; }
+    100% { transform: scale(1); opacity: 1; }
+}
+
+.pulse-warning {
+    animation: pulseWarning 1s infinite;
+}
+
+@keyframes pulseWarning {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+    100% { transform: scale(1); }
+}
+
+@media (max-width: 768px) {
+    .speedometer {
+        width: 150px;
+        height: 75px;
+    }
+    
+    .speedometer-circle {
+        width: 150px;
+        height: 75px;
+    }
+    
+    .needle {
+        height: 60px;
+    }
+    
+    .traffic-light {
+        width: 60px;
+        padding: 15px;
+    }
+    
+    .light {
+        width: 30px;
+        height: 30px;
+    }
+}
+</style>
+{% endblock %}

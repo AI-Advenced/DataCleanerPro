@@ -1,0 +1,308 @@
+{% extends "base.html" %}
+
+{% block title %}Connexion - DataCleaner-Pro{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center min-vh-100 align-items-center">
+        <div class="col-md-5">
+            <div class="card border-0 shadow-lg">
+                <div class="card-body p-5">
+                    <div class="text-center mb-4">
+                        <i class="fas fa-database fa-3x text-primary mb-3"></i>
+                        <h2 class="fw-bold text-primary">DataCleaner-Pro</h2>
+                        <p class="text-muted">Connectez-vous à votre compte</p>
+                    </div>
+                    
+                    <form method="POST">
+                        {{ form.hidden_tag() }}
+                        
+                        <div class="mb-3">
+                            {{ form.email.label(class="form-label fw-semibold") }}
+                            {{ form.email(class="form-control form-control-lg") }}
+                            {% if form.email.errors %}
+                                <div class="text-danger mt-1">
+                                    {% for error in form.email.errors %}
+                                        <small><i class="fas fa-exclamation-triangle me-1"></i>{{ error }}</small><br>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="mb-3">
+                            {{ form.password.label(class="form-label fw-semibold") }}
+                            <div class="position-relative">
+                                {{ form.password(class="form-control form-control-lg", id="password") }}
+                                <button type="button" class="btn btn-link position-absolute end-0 top-0 me-2 mt-2" 
+                                        onclick="togglePassword()" id="toggleBtn">
+                                    <i class="fas fa-eye" id="toggleIcon"></i>
+                                </button>
+                            </div>
+                            {% if form.password.errors %}
+                                <div class="text-danger mt-1">
+                                    {% for error in form.password.errors %}
+                                        <small><i class="fas fa-exclamation-triangle me-1"></i>{{ error }}</small><br>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="mb-3 d-flex justify-content-between align-items-center">
+                            <div class="form-check">
+                                {{ form.remember_me(class="form-check-input") }}
+                                {{ form.remember_me.label(class="form-check-label") }}
+                            </div>
+                            <a href="#" class="text-decoration-none" data-bs-toggle="modal" data-bs-target="#forgotPasswordModal">
+                                Mot de passe oublié ?
+                            </a>
+                        </div>
+                        
+                        <div class="d-grid mb-3">
+                            {{ form.submit(class="btn btn-primary btn-lg") }}
+                        </div>
+                    </form>
+                    
+                    <hr>
+                    
+                    <div class="text-center">
+                        <p class="mb-3">Ou connectez-vous avec :</p>
+                        <button class="btn btn-outline-danger me-2" onclick="loginWithGoogle()">
+                            <i class="fab fa-google me-2"></i>Google
+                        </button>
+                        <button class="btn btn-outline-primary" onclick="loginWithLinkedIn()">
+                            <i class="fab fa-linkedin me-2"></i>LinkedIn
+                        </button>
+                    </div>
+                    
+                    <hr>
+                    
+                    <div class="text-center">
+                        <p class="mb-0">
+                            Pas encore de compte ? 
+                            <a href="{{ url_for('auth.register') }}" class="text-decoration-none fw-semibold">
+                                Créer un compte
+                            </a>
+                        </p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Informations de sécurité -->
+            <div class="card border-0 mt-3">
+                <div class="card-body text-center">
+                    <div class="row">
+                        <div class="col-4">
+                            <i class="fas fa-shield-alt text-success fs-4"></i>
+                            <p class="small text-muted mb-0">Sécurisé SSL</p>
+                        </div>
+                        <div class="col-4">
+                            <i class="fas fa-lock text-success fs-4"></i>
+                            <p class="small text-muted mb-0">Données cryptées</p>
+                        </div>
+                        <div class="col-4">
+                            <i class="fas fa-user-shield text-success fs-4"></i>
+                            <p class="small text-muted mb-0">RGPD conforme</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Panneau d'informations -->
+        <div class="col-md-5 offset-md-1 d-none d-md-block">
+            <div class="text-center">
+                <img src="https://via.placeholder.com/400x300/3498db/ffffff?text=Analytics+Dashboard" 
+                     class="img-fluid rounded shadow mb-4" alt="Dashboard Preview">
+                
+                <h3 class="fw-bold text-primary mb-3">Bienvenue sur DataCleaner-Pro</h3>
+                <p class="text-muted fs-5 mb-4">
+                    Transformez vos données brutes en insights exploitables avec notre 
+                    plateforme de nettoyage et d'analyse automatique.
+                </p>
+                
+                <div class="row text-center">
+                    <div class="col-4">
+                        <div class="p-3">
+                            <i class="fas fa-broom fa-2x text-primary mb-2"></i>
+                            <h6>Nettoyage IA</h6>
+                            <small class="text-muted">Automatique et intelligent</small>
+                        </div>
+                    </div>
+                    <div class="col-4">
+                        <div class="p-3">
+                            <i class="fas fa-chart-bar fa-2x text-success mb-2"></i>
+                            <h6>Analyses</h6>
+                            <small class="text-muted">Statistiques avancées</small>
+                        </div>
+                    </div>
+                    <div class="col-4">
+                        <div class="p-3">
+                            <i class="fas fa-cogs fa-2x text-warning mb-2"></i>
+                            <h6>Automatisation</h6>
+                            <small class="text-muted">Pipeline ETL</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal mot de passe oublié -->
+<div class="modal fade" id="forgotPasswordModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Réinitialiser le mot de passe</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="forgotPasswordForm">
+                    <div class="mb-3">
+                        <label for="resetEmail" class="form-label">Adresse email</label>
+                        <input type="email" class="form-control" id="resetEmail" required
+                               placeholder="votre@email.com">
+                    </div>
+                    <div class="text-muted">
+                        <small>
+                            <i class="fas fa-info-circle me-1"></i>
+                            Un lien de réinitialisation sera envoyé à cette adresse.
+                        </small>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                <button type="button" class="btn btn-primary" onclick="sendResetEmail()">
+                    <i class="fas fa-paper-plane me-2"></i>Envoyer
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function togglePassword() {
+    const password = document.getElementById('password');
+    const icon = document.getElementById('toggleIcon');
+    
+    if (password.type === 'password') {
+        password.type = 'text';
+        icon.className = 'fas fa-eye-slash';
+    } else {
+        password.type = 'password';
+        icon.className = 'fas fa-eye';
+    }
+}
+
+function loginWithGoogle() {
+    // Implémentation OAuth Google
+    alert('Fonctionnalité en cours de développement');
+}
+
+function loginWithLinkedIn() {
+    // Implémentation OAuth LinkedIn
+    alert('Fonctionnalité en cours de développement');
+}
+
+function sendResetEmail() {
+    const email = document.getElementById('resetEmail').value;
+    if (!email) {
+        alert('Veuillez saisir votre adresse email');
+        return;
+    }
+    
+    // Simulation d'envoi d'email
+    const btn = event.target;
+    const originalText = btn.innerHTML;
+    btn.innerHTML = '<span class="loading-spinner me-2"></span>Envoi...';
+    btn.disabled = true;
+    
+    setTimeout(() => {
+        btn.innerHTML = '<i class="fas fa-check me-2"></i>Envoyé !';
+        btn.className = 'btn btn-success';
+        
+        setTimeout(() => {
+            const modal = bootstrap.Modal.getInstance(document.getElementById('forgotPasswordModal'));
+            modal.hide();
+            
+            // Reset
+            btn.innerHTML = originalText;
+            btn.className = 'btn btn-primary';
+            btn.disabled = false;
+            document.getElementById('resetEmail').value = '';
+        }, 2000);
+    }, 2000);
+}
+
+// Animation d'entrée
+document.addEventListener('DOMContentLoaded', function() {
+    const card = document.querySelector('.card');
+    card.style.opacity = '0';
+    card.style.transform = 'translateY(50px)';
+    
+    setTimeout(() => {
+        card.style.transition = 'all 0.5s ease';
+        card.style.opacity = '1';
+        card.style.transform = 'translateY(0)';
+    }, 100);
+});
+
+// Validation en temps réel
+document.addEventListener('DOMContentLoaded', function() {
+    const emailField = document.getElementById('email');
+    const passwordField = document.getElementById('password');
+    
+    if (emailField) {
+        emailField.addEventListener('blur', function() {
+            const email = this.value;
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            
+            if (email && !emailRegex.test(email)) {
+                this.classList.add('is-invalid');
+            } else {
+                this.classList.remove('is-invalid');
+                this.classList.add('is-valid');
+            }
+        });
+    }
+    
+    if (passwordField) {
+        passwordField.addEventListener('input', function() {
+            const password = this.value;
+            
+            if (password.length >= 6) {
+                this.classList.remove('is-invalid');
+                this.classList.add('is-valid');
+            } else if (password.length > 0) {
+                this.classList.add('is-invalid');
+                this.classList.remove('is-valid');
+            } else {
+                this.classList.remove('is-invalid', 'is-valid');
+            }
+        });
+    }
+});
+</script>
+
+<style>
+.min-vh-100 {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.card {
+    backdrop-filter: blur(10px);
+    background: rgba(255, 255, 255, 0.95);
+}
+
+.btn-outline-danger:hover {
+    background-color: #dc3545;
+    border-color: #dc3545;
+}
+
+.btn-outline-primary:hover {
+    background-color: #0d6efd;
+    border-color: #0d6efd;
+}
+</style>
+{% endblock %}

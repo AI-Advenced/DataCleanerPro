@@ -1,0 +1,322 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - DataCleaner Pro{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">
+        <i class="fas fa-tachometer-alt me-2"></i>
+        Dashboard
+    </h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <div class="btn-group me-2">
+            <a href="{{ url_for('main.upload_file') }}" class="btn btn-sm btn-outline-secondary">
+                <i class="fas fa-upload"></i> Nouveau Dataset
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- Statistiques générales -->
+<div class="row mb-4">
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-primary shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
+                            Datasets Total
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">{{ datasets_count }}</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-database fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-success shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                            Tâches de Nettoyage
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">{{ jobs_count }}</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-broom fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-info shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
+                            Quota Utilisé
+                        </div>
+                        <div class="row no-gutters align-items-center">
+                            <div class="col-auto">
+                                <div class="h5 mb-0 mr-3 font-weight-bold text-gray-800">{{ "%.1f"|format(quota_percentage) }}%</div>
+                            </div>
+                            <div class="col">
+                                <div class="progress progress-sm mr-2">
+                                    <div class="progress-bar bg-info" role="progressbar"
+                                         style="width: {{ quota_percentage }}%" aria-valuenow="{{ quota_percentage }}"
+                                         aria-valuemin="0" aria-valuemax="100"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-clipboard-list fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-warning shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
+                            Statut Premium
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">
+                            {% if current_user.is_premium %}
+                                <span class="badge bg-success">Actif</span>
+                            {% else %}
+                                <span class="badge bg-secondary">Gratuit</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-star fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Actions rapides -->
+<div class="row mb-4">
+    <div class="col-lg-6">
+        <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">
+                    <i class="fas fa-bolt me-2"></i>
+                    Actions Rapides
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <a href="{{ url_for('main.upload_file') }}" class="btn btn-primary btn-lg w-100">
+                            <i class="fas fa-upload me-2"></i>
+                            Uploader Dataset
+                        </a>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <a href="{{ url_for('nettoyage_auto') }}" class="btn btn-success btn-lg w-100">
+                            <i class="fas fa-magic me-2"></i>
+                            Nettoyage Auto
+                        </a>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <a href="{{ url_for('analyses') }}" class="btn btn-info btn-lg w-100">
+                            <i class="fas fa-chart-line me-2"></i>
+                            Analyser Données
+                        </a>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <a href="{{ url_for('ml_auto') }}" class="btn btn-warning btn-lg w-100">
+                            <i class="fas fa-brain me-2"></i>
+                            ML Automatique
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-6">
+        <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">
+                    <i class="fas fa-chart-pie me-2"></i>
+                    Statistiques d'Utilisation
+                </h6>
+            </div>
+            <div class="card-body">
+                <canvas id="usageChart" width="100" height="100"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Datasets récents -->
+<div class="row">
+    <div class="col-lg-12">
+        <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">
+                    <i class="fas fa-database me-2"></i>
+                    Datasets Récents
+                </h6>
+            </div>
+            <div class="card-body">
+                {% if recent_datasets %}
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Nom</th>
+                                    <th>Type</th>
+                                    <th>Taille</th>
+                                    <th>Lignes</th>
+                                    <th>Colonnes</th>
+                                    <th>Statut</th>
+                                    <th>Date</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for dataset in recent_datasets %}
+                                    <tr>
+                                        <td>
+                                            <strong>{{ dataset.name }}</strong>
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-secondary">{{ dataset.file_type.upper() }}</span>
+                                        </td>
+                                        <td>{{ "%.2f MB"|format(dataset.get_file_size_mb()) }}</td>
+                                        <td>{{ dataset.rows_count or 'N/A' }}</td>
+                                        <td>{{ dataset.columns_count or 'N/A' }}</td>
+                                        <td>
+                                            {% if dataset.is_cleaned %}
+                                                <span class="badge bg-success">Nettoyé</span>
+                                            {% else %}
+                                                <span class="badge bg-warning">Brut</span>
+                                            {% endif %}
+                                            {% if dataset.is_analyzed %}
+                                                <span class="badge bg-info">Analysé</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>{{ dataset.upload_date.strftime('%d/%m/%Y') }}</td>
+                                        <td>
+                                            <div class="btn-group btn-group-sm">
+                                                <button class="btn btn-outline-primary btn-sm" title="Voir">
+                                                    <i class="fas fa-eye"></i>
+                                                </button>
+                                                {% if not dataset.is_cleaned %}
+                                                    <button class="btn btn-outline-success btn-sm" title="Nettoyer"
+                                                            onclick="startCleaning({{ dataset.id }})">
+                                                        <i class="fas fa-broom"></i>
+                                                    </button>
+                                                {% endif %}
+                                                {% if dataset.is_cleaned and not dataset.is_analyzed %}
+                                                    <button class="btn btn-outline-info btn-sm" title="Analyser"
+                                                            onclick="startAnalysis({{ dataset.id }})">
+                                                        <i class="fas fa-chart-line"></i>
+                                                    </button>
+                                                {% endif %}
+                                            </div>
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="text-center py-5">
+                        <i class="fas fa-database fa-3x text-muted mb-3"></i>
+                        <h5 class="text-muted">Aucun dataset trouvé</h5>
+                        <p class="text-muted">Commencez par uploader votre premier dataset.</p>
+                        <a href="{{ url_for('main.upload_file') }}" class="btn btn-primary">
+                            <i class="fas fa-upload me-2"></i>
+                            Uploader Dataset
+                        </a>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Graphique d'utilisation
+const ctx = document.getElementById('usageChart').getContext('2d');
+const usageChart = new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+        labels: ['Datasets Nettoyés', 'Datasets Bruts', 'Analyses Complètes'],
+        datasets: [{
+            data: [{{ datasets_count }}, {{ jobs_count }}, 5],
+            backgroundColor: ['#28a745', '#ffc107', '#17a2b8'],
+            borderWidth: 0
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: {
+                position: 'bottom'
+            }
+        }
+    }
+});
+
+// Fonctions pour les actions rapides
+function startCleaning(datasetId) {
+    if (confirm('Démarrer le nettoyage automatique de ce dataset ?')) {
+        axios.post('/api/start-cleaning', {
+            dataset_id: datasetId,
+            mode: 'automatic'
+        })
+        .then(response => {
+            if (response.data.success) {
+                alert('Nettoyage démarré avec succès !');
+                location.reload();
+            }
+        })
+        .catch(error => {
+            alert('Erreur lors du démarrage du nettoyage');
+            console.error(error);
+        });
+    }
+}
+
+function startAnalysis(datasetId) {
+    if (confirm('Démarrer l\'analyse automatique de ce dataset ?')) {
+        axios.post('/api/start-analysis', {
+            dataset_id: datasetId,
+            type: 'statistical'
+        })
+        .then(response => {
+            if (response.data.success) {
+                alert('Analyse démarrée avec succès !');
+                location.reload();
+            }
+        })
+        .catch(error => {
+            alert('Erreur lors du démarrage de l\'analyse');
+            console.error(error);
+        });
+    }
+}
+</script>
+{% endblock %}

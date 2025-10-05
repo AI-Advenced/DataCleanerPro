@@ -1,0 +1,1076 @@
+{% extends "base.html" %}
+
+{% block title %}Machine Learning Automatique - DataCleaner Pro{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">
+        <i class="fas fa-brain me-2"></i>
+        Machine Learning Automatique
+    </h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <div class="btn-group me-2">
+            <button class="btn btn-sm btn-primary" id="newModelBtn">
+                <i class="fas fa-plus"></i> Nouveau Modèle
+            </button>
+            <button class="btn btn-sm btn-success" id="autoMLBtn">
+                <i class="fas fa-magic"></i> AutoML
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Statistiques ML -->
+<div class="row mb-4">
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-primary shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
+                            Modèles Entraînés
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">{{ models|length or 12 }}</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-robot fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-success shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                            Précision Moyenne
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">87.2%</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-bullseye fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-info shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
+                            Prédictions Réalisées
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">45.7K</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-chart-line fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-warning shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
+                            Temps d'Entraînement
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">2.4h</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-clock fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- AutoML et Création de Modèle -->
+<div class="row mb-4">
+    <div class="col-lg-4">
+        <div class="card shadow">
+            <div class="card-header">
+                <h6 class="m-0 font-weight-bold text-primary">
+                    <i class="fas fa-magic me-2"></i>
+                    Assistant AutoML
+                </h6>
+            </div>
+            <div class="card-body">
+                <form id="autoMLForm">
+                    <div class="mb-3">
+                        <label class="form-label">Nom du Projet ML</label>
+                        <input type="text" class="form-control" id="mlProjectName" 
+                               placeholder="Ex: Prédiction Churn Clients">
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Dataset</label>
+                        <select class="form-select" id="mlDatasetSelect">
+                            <option value="">Sélectionner un dataset...</option>
+                            {% for dataset in datasets %}
+                                <option value="{{ dataset.id }}">
+                                    {{ dataset.name }}
+                                    {% if dataset.is_cleaned %}✓{% endif %}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Type de Problème</label>
+                        <select class="form-select" id="problemType">
+                            <option value="">Détection automatique...</option>
+                            <option value="classification">Classification</option>
+                            <option value="regression">Régression</option>
+                            <option value="clustering">Clustering</option>
+                            <option value="anomaly_detection">Détection d'Anomalies</option>
+                            <option value="time_series">Séries Temporelles</option>
+                            <option value="nlp">Traitement du Langage</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3" id="targetColumnDiv" style="display: none;">
+                        <label class="form-label">Variable Cible</label>
+                        <select class="form-select" id="targetColumnML">
+                            <option value="">Sélectionner...</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Objectif de Performance</label>
+                        <select class="form-select" id="performanceGoal">
+                            <option value="accuracy">Précision Maximale</option>
+                            <option value="speed">Rapidité d'Exécution</option>
+                            <option value="interpretability">Interprétabilité</option>
+                            <option value="balanced">Équilibré</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Temps d'Entraînement Max</label>
+                        <select class="form-select" id="maxTrainingTime">
+                            <option value="5">5 minutes</option>
+                            <option value="15">15 minutes</option>
+                            <option value="30" selected>30 minutes</option>
+                            <option value="60">1 heure</option>
+                            <option value="180">3 heures</option>
+                            <option value="unlimited">Illimité</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="enableEnsemble" checked>
+                            <label class="form-check-label" for="enableEnsemble">
+                                Méthodes d'ensemble
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="enableFeatureEngineering" checked>
+                            <label class="form-check-label" for="enableFeatureEngineering">
+                                Feature Engineering automatique
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="enableExplainability" checked>
+                            <label class="form-check-label" for="enableExplainability">
+                                Génération d'explications
+                            </label>
+                        </div>
+                    </div>
+
+                    <button type="button" class="btn btn-primary w-100" id="startAutoMLBtn">
+                        <i class="fas fa-rocket me-2"></i>
+                        Démarrer AutoML
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Algorithmes Recommandés -->
+        <div class="card shadow mt-4">
+            <div class="card-header">
+                <h6 class="m-0 font-weight-bold text-success">
+                    <i class="fas fa-lightbulb me-2"></i>
+                    Algorithmes Recommandés
+                </h6>
+            </div>
+            <div class="card-body" id="recommendedAlgorithms">
+                <div class="text-center text-muted">
+                    <i class="fas fa-info-circle fa-2x mb-2"></i>
+                    <p class="small">Sélectionnez un dataset pour voir les algorithmes recommandés</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-8">
+        <div class="card shadow">
+            <div class="card-header">
+                <h6 class="m-0 font-weight-bold text-primary">
+                    <i class="fas fa-chart-area me-2"></i>
+                    Aperçu des Données ML
+                </h6>
+            </div>
+            <div class="card-body">
+                <div id="mlDataPreview" class="text-center py-5">
+                    <i class="fas fa-database fa-3x text-muted mb-3"></i>
+                    <h5 class="text-muted">Sélectionnez un dataset</h5>
+                    <p class="text-muted">L'aperçu et les recommandations apparaîtront ici</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modèles Existants -->
+<div class="row">
+    <div class="col-lg-12">
+        <div class="card shadow">
+            <div class="card-header">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h6 class="m-0 font-weight-bold text-primary">
+                        <i class="fas fa-robot me-2"></i>
+                        Modèles ML Existants
+                    </h6>
+                    <div>
+                        <button class="btn btn-sm btn-outline-info" onclick="compareModels()">
+                            <i class="fas fa-balance-scale me-1"></i>Comparer
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th width="30">
+                                    <input type="checkbox" id="selectAllModels" class="form-check-input">
+                                </th>
+                                <th>Modèle</th>
+                                <th>Type</th>
+                                <th>Algorithme</th>
+                                <th>Performance</th>
+                                <th>Statut</th>
+                                <th>Dernière Prédiction</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Exemple de modèles -->
+                            <tr>
+                                <td>
+                                    <input type="checkbox" class="form-check-input model-checkbox" value="1">
+                                </td>
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        <div class="model-icon me-3">
+                                            <i class="fas fa-brain fa-2x text-primary"></i>
+                                        </div>
+                                        <div>
+                                            <strong>Prédiction Churn</strong><br>
+                                            <small class="text-muted">Prédiction de désabonnement clients</small>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td><span class="badge bg-success">Classification</span></td>
+                                <td>
+                                    <span class="badge bg-info">Random Forest</span>
+                                </td>
+                                <td>
+                                    <div class="performance-metrics">
+                                        <div class="d-flex justify-content-between">
+                                            <small>Précision:</small>
+                                            <strong>92.3%</strong>
+                                        </div>
+                                        <div class="progress" style="height: 4px;">
+                                            <div class="progress-bar bg-success" style="width: 92.3%"></div>
+                                        </div>
+                                        <small class="text-muted">F1-Score: 0.91 | Recall: 0.89</small>
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="badge bg-success">
+                                        <i class="fas fa-check me-1"></i>Déployé
+                                    </span>
+                                </td>
+                                <td>
+                                    <small>Il y a 2 min</small><br>
+                                    <small class="text-muted">324 prédictions</small>
+                                </td>
+                                <td>
+                                    <div class="btn-group btn-group-sm">
+                                        <button class="btn btn-outline-success btn-sm" onclick="makePrediction(1)" title="Prédire">
+                                            <i class="fas fa-play"></i>
+                                        </button>
+                                        <button class="btn btn-outline-info btn-sm" onclick="viewModelDetails(1)" title="Détails">
+                                            <i class="fas fa-eye"></i>
+                                        </button>
+                                        <button class="btn btn-outline-warning btn-sm" onclick="retrainModel(1)" title="Re-entraîner">
+                                            <i class="fas fa-redo"></i>
+                                        </button>
+                                        <button class="btn btn-outline-primary btn-sm" onclick="exportModel(1)" title="Exporter">
+                                            <i class="fas fa-download"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    <input type="checkbox" class="form-check-input model-checkbox" value="2">
+                                </td>
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        <div class="model-icon me-3">
+                                            <i class="fas fa-chart-line fa-2x text-success"></i>
+                                        </div>
+                                        <div>
+                                            <strong>Prévision Ventes</strong><br>
+                                            <small class="text-muted">Prédiction du chiffre d'affaires mensuel</small>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td><span class="badge bg-primary">Régression</span></td>
+                                <td>
+                                    <span class="badge bg-warning">XGBoost</span>
+                                </td>
+                                <td>
+                                    <div class="performance-metrics">
+                                        <div class="d-flex justify-content-between">
+                                            <small>R²:</small>
+                                            <strong>0.847</strong>
+                                        </div>
+                                        <div class="progress" style="height: 4px;">
+                                            <div class="progress-bar bg-primary" style="width: 84.7%"></div>
+                                        </div>
+                                        <small class="text-muted">MAE: 2.3K | RMSE: 3.1K</small>
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="badge bg-warning">
+                                        <i class="fas fa-cogs me-1"></i>Entraînement
+                                    </span>
+                                </td>
+                                <td>
+                                    <small>-</small><br>
+                                    <small class="text-muted">En cours...</small>
+                                </td>
+                                <td>
+                                    <div class="btn-group btn-group-sm">
+                                        <button class="btn btn-outline-secondary btn-sm" disabled title="En cours">
+                                            <i class="fas fa-spinner fa-spin"></i>
+                                        </button>
+                                        <button class="btn btn-outline-info btn-sm" onclick="viewTrainingProgress(2)" title="Progression">
+                                            <i class="fas fa-chart-bar"></i>
+                                        </button>
+                                        <button class="btn btn-outline-danger btn-sm" onclick="stopTraining(2)" title="Arrêter">
+                                            <i class="fas fa-stop"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    <input type="checkbox" class="form-check-input model-checkbox" value="3">
+                                </td>
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        <div class="model-icon me-3">
+                                            <i class="fas fa-project-diagram fa-2x text-info"></i>
+                                        </div>
+                                        <div>
+                                            <strong>Segmentation Clients</strong><br>
+                                            <small class="text-muted">Clustering comportemental des clients</small>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td><span class="badge bg-info">Clustering</span></td>
+                                <td>
+                                    <span class="badge bg-secondary">K-Means</span>
+                                </td>
+                                <td>
+                                    <div class="performance-metrics">
+                                        <div class="d-flex justify-content-between">
+                                            <small>Silhouette:</small>
+                                            <strong>0.73</strong>
+                                        </div>
+                                        <div class="progress" style="height: 4px;">
+                                            <div class="progress-bar bg-info" style="width: 73%"></div>
+                                        </div>
+                                        <small class="text-muted">5 clusters | Inertie: 1.2K</small>
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="badge bg-success">
+                                        <i class="fas fa-check me-1"></i>Déployé
+                                    </span>
+                                </td>
+                                <td>
+                                    <small>Il y a 1h</small><br>
+                                    <small class="text-muted">89 segmentations</small>
+                                </td>
+                                <td>
+                                    <div class="btn-group btn-group-sm">
+                                        <button class="btn btn-outline-success btn-sm" onclick="makePrediction(3)" title="Prédire">
+                                            <i class="fas fa-play"></i>
+                                        </button>
+                                        <button class="btn btn-outline-info btn-sm" onclick="viewClusters(3)" title="Voir Clusters">
+                                            <i class="fas fa-eye"></i>
+                                        </button>
+                                        <button class="btn btn-outline-primary btn-sm" onclick="exportModel(3)" title="Exporter">
+                                            <i class="fas fa-download"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal d'Entraînement AutoML -->
+<div class="modal fade" id="autoMLModal" tabindex="-1">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-magic me-2"></i>
+                    Entraînement AutoML en Cours
+                </h5>
+            </div>
+            <div class="modal-body">
+                <div class="automl-progress">
+                    <!-- En-tête de progression -->
+                    <div class="row mb-4">
+                        <div class="col-md-4">
+                            <div class="card border-primary">
+                                <div class="card-body text-center">
+                                    <h6>Projet ML</h6>
+                                    <strong id="automlProjectName">-</strong>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card border-success">
+                                <div class="card-body text-center">
+                                    <h6>Temps Écoulé</h6>
+                                    <strong id="automlElapsedTime">00:00:00</strong>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card border-info">
+                                <div class="card-body text-center">
+                                    <h6>Progression</h6>
+                                    <strong id="automlProgressText">0%</strong>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Barre de progression principale -->
+                    <div class="mb-4">
+                        <h6><i class="fas fa-tasks me-2"></i>Progression Générale</h6>
+                        <div class="progress mb-2" style="height: 20px;">
+                            <div class="progress-bar progress-bar-striped progress-bar-animated" 
+                                 id="automlMainProgress" style="width: 0%"></div>
+                        </div>
+                    </div>
+                    
+                    <!-- Étapes détaillées -->
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6><i class="fas fa-list-ol me-2"></i>Étapes d'Entraînement</h6>
+                            <div class="list-group" id="automlSteps">
+                                <div class="list-group-item d-flex justify-content-between align-items-center">
+                                    <span><i class="fas fa-database me-2"></i>Préparation des données</span>
+                                    <span class="badge bg-secondary" id="step-1-status">En attente</span>
+                                </div>
+                                <div class="list-group-item d-flex justify-content-between align-items-center">
+                                    <span><i class="fas fa-cogs me-2"></i>Feature Engineering</span>
+                                    <span class="badge bg-secondary" id="step-2-status">En attente</span>
+                                </div>
+                                <div class="list-group-item d-flex justify-content-between align-items-center">
+                                    <span><i class="fas fa-search me-2"></i>Sélection d'algorithmes</span>
+                                    <span class="badge bg-secondary" id="step-3-status">En attente</span>
+                                </div>
+                                <div class="list-group-item d-flex justify-content-between align-items-center">
+                                    <span><i class="fas fa-chart-line me-2"></i>Entraînement des modèles</span>
+                                    <span class="badge bg-secondary" id="step-4-status">En attente</span>
+                                </div>
+                                <div class="list-group-item d-flex justify-content-between align-items-center">
+                                    <span><i class="fas fa-balance-scale me-2"></i>Évaluation et sélection</span>
+                                    <span class="badge bg-secondary" id="step-5-status">En attente</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <h6><i class="fas fa-robot me-2"></i>Modèles Testés</h6>
+                            <div id="testedModels" class="bg-light p-3 rounded" style="height: 200px; overflow-y: auto;">
+                                <small class="text-muted">Les modèles apparaîtront ici pendant l'entraînement...</small>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Logs d'entraînement -->
+                    <div class="mt-4">
+                        <h6><i class="fas fa-terminal me-2"></i>Logs d'Entraînement</h6>
+                        <div id="automlLogs" class="bg-dark text-light p-3 rounded" 
+                             style="height: 150px; overflow-y: auto; font-family: monospace; font-size: 0.9em;">
+                            <div class="log-entry">[2024-12-01 16:00:00] Initialisation de l'AutoML...</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-danger" id="stopAutoMLBtn">
+                    <i class="fas fa-stop me-2"></i>Arrêter
+                </button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" disabled id="closeAutoMLBtn">
+                    Fermer
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de Prédiction -->
+<div class="modal fade" id="predictionModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-crystal-ball me-2"></i>
+                    Faire une Prédiction
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="predictionInterface">
+                    <div class="mb-3">
+                        <label class="form-label">Modèle Sélectionné</label>
+                        <input type="text" class="form-control" id="selectedModelName" readonly>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Mode de Prédiction</label>
+                        <div class="btn-group w-100" role="group">
+                            <input type="radio" class="btn-check" name="predictionMode" id="singlePrediction" value="single" checked>
+                            <label class="btn btn-outline-primary" for="singlePrediction">
+                                <i class="fas fa-user me-1"></i>Prédiction Unique
+                            </label>
+                            <input type="radio" class="btn-check" name="predictionMode" id="batchPrediction" value="batch">
+                            <label class="btn btn-outline-info" for="batchPrediction">
+                                <i class="fas fa-users me-1"></i>Prédiction par Lot
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div id="singlePredictionForm">
+                        <h6><i class="fas fa-keyboard me-2"></i>Saisie Manuelle</h6>
+                        <div id="predictionInputs" class="row">
+                            <!-- Les champs seront générés dynamiquement -->
+                        </div>
+                        <button type="button" class="btn btn-primary" id="makeSinglePrediction">
+                            <i class="fas fa-play me-2"></i>Prédire
+                        </button>
+                    </div>
+                    
+                    <div id="batchPredictionForm" style="display: none;">
+                        <h6><i class="fas fa-file-upload me-2"></i>Upload de Fichier</h6>
+                        <div class="mb-3">
+                            <input class="form-control" type="file" id="batchFile" accept=".csv,.xlsx">
+                            <div class="form-text">Formats supportés: CSV, Excel</div>
+                        </div>
+                        <button type="button" class="btn btn-info" id="makeBatchPrediction">
+                            <i class="fas fa-upload me-2"></i>Prédire par Lot
+                        </button>
+                    </div>
+                    
+                    <hr>
+                    
+                    <div id="predictionResults" style="display: none;">
+                        <h6><i class="fas fa-chart-bar me-2"></i>Résultats</h6>
+                        <div id="predictionOutput" class="bg-light p-3 rounded">
+                            <!-- Résultats apparaîtront ici -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const problemTypeSelect = document.getElementById('problemType');
+    const targetColumnDiv = document.getElementById('targetColumnDiv');
+    const mlDatasetSelect = document.getElementById('mlDatasetSelect');
+    
+    // Afficher/masquer la colonne cible selon le type de problème
+    problemTypeSelect?.addEventListener('change', function() {
+        const needsTarget = ['classification', 'regression'].includes(this.value);
+        targetColumnDiv.style.display = needsTarget ? 'block' : 'none';
+    });
+    
+    // Charger l'aperçu du dataset et les recommandations
+    mlDatasetSelect?.addEventListener('change', function() {
+        if (this.value) {
+            loadMLDatasetPreview(parseInt(this.value));
+            loadMLRecommendations(parseInt(this.value));
+            loadDatasetColumns(parseInt(this.value));
+        } else {
+            resetMLPreview();
+        }
+    });
+    
+    // Démarrer AutoML
+    document.getElementById('startAutoMLBtn')?.addEventListener('click', startAutoML);
+    
+    // Gestion des modes de prédiction
+    document.querySelectorAll('input[name="predictionMode"]').forEach(radio => {
+        radio.addEventListener('change', function() {
+            document.getElementById('singlePredictionForm').style.display = 
+                this.value === 'single' ? 'block' : 'none';
+            document.getElementById('batchPredictionForm').style.display = 
+                this.value === 'batch' ? 'block' : 'none';
+        });
+    });
+});
+
+function loadMLDatasetPreview(datasetId) {
+    document.getElementById('mlDataPreview').innerHTML = `
+        <div class="text-center py-3">
+            <i class="fas fa-spinner fa-spin fa-2x text-primary mb-2"></i>
+            <p>Analyse des données ML...</p>
+        </div>
+    `;
+    
+    // Simuler l'analyse ML
+    setTimeout(() => {
+        const mlAnalysis = generateMLAnalysis();
+        document.getElementById('mlDataPreview').innerHTML = `
+            <div class="row text-start">
+                <div class="col-md-6">
+                    <h6><i class="fas fa-database text-primary me-2"></i>Caractéristiques ML</h6>
+                    <ul class="list-unstyled small">
+                        <li><strong>Variables numériques:</strong> ${mlAnalysis.numericFeatures}</li>
+                        <li><strong>Variables catégorielles:</strong> ${mlAnalysis.categoricalFeatures}</li>
+                        <li><strong>Variables temporelles:</strong> ${mlAnalysis.dateFeatures}</li>
+                        <li><strong>Taux de complétion:</strong> ${mlAnalysis.completeness}%</li>
+                    </ul>
+                </div>
+                <div class="col-md-6">
+                    <h6><i class="fas fa-chart-line text-success me-2"></i>Potentiel ML</h6>
+                    <div class="mb-2">
+                        <small>Classification: <strong>${mlAnalysis.classificationScore}%</strong></small>
+                        <div class="progress" style="height: 5px;">
+                            <div class="progress-bar bg-success" style="width: ${mlAnalysis.classificationScore}%"></div>
+                        </div>
+                    </div>
+                    <div class="mb-2">
+                        <small>Régression: <strong>${mlAnalysis.regressionScore}%</strong></small>
+                        <div class="progress" style="height: 5px;">
+                            <div class="progress-bar bg-info" style="width: ${mlAnalysis.regressionScore}%"></div>
+                        </div>
+                    </div>
+                    <div class="mb-2">
+                        <small>Clustering: <strong>${mlAnalysis.clusteringScore}%</strong></small>
+                        <div class="progress" style="height: 5px;">
+                            <div class="progress-bar bg-warning" style="width: ${mlAnalysis.clusteringScore}%"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="mt-4">
+                <h6><i class="fas fa-lightbulb text-warning me-2"></i>Insights ML</h6>
+                <div class="alert alert-light">
+                    ${mlAnalysis.insights.map(insight => `
+                        <div class="d-flex align-items-start mb-2">
+                            <i class="fas fa-chevron-right text-primary me-2 mt-1"></i>
+                            <span class="small">${insight}</span>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+        `;
+    }, 1500);
+}
+
+function loadMLRecommendations(datasetId) {
+    // Simuler les recommandations d'algorithmes
+    setTimeout(() => {
+        const algorithms = [
+            { name: 'Random Forest', score: 95, type: 'Ensemble', reason: 'Excellent pour données mixtes' },
+            { name: 'XGBoost', score: 92, type: 'Boosting', reason: 'Haute performance prédictive' },
+            { name: 'Logistic Regression', score: 78, type: 'Linéaire', reason: 'Interprétable et rapide' },
+            { name: 'Neural Network', score: 88, type: 'Deep Learning', reason: 'Capture des patterns complexes' }
+        ];
+        
+        document.getElementById('recommendedAlgorithms').innerHTML = `
+            <div class="d-grid gap-2">
+                ${algorithms.map(algo => `
+                    <div class="algorithm-card border rounded p-2">
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <strong class="small">${algo.name}</strong>
+                            <span class="badge bg-${algo.score >= 90 ? 'success' : algo.score >= 80 ? 'info' : 'warning'}">
+                                ${algo.score}%
+                            </span>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <small class="text-muted">${algo.type}</small>
+                            <small class="text-muted">${algo.reason}</small>
+                        </div>
+                        <div class="progress mt-1" style="height: 3px;">
+                            <div class="progress-bar bg-${algo.score >= 90 ? 'success' : algo.score >= 80 ? 'info' : 'warning'}" 
+                                 style="width: ${algo.score}%"></div>
+                        </div>
+                    </div>
+                `).join('')}
+            </div>
+        `;
+    }, 1000);
+}
+
+function generateMLAnalysis() {
+    return {
+        numericFeatures: Math.floor(Math.random() * 15) + 5,
+        categoricalFeatures: Math.floor(Math.random() * 8) + 2,
+        dateFeatures: Math.floor(Math.random() * 3),
+        completeness: Math.floor(Math.random() * 20) + 80,
+        classificationScore: Math.floor(Math.random() * 30) + 70,
+        regressionScore: Math.floor(Math.random() * 25) + 65,
+        clusteringScore: Math.floor(Math.random() * 20) + 60,
+        insights: [
+            "Dataset bien adapté aux algorithmes d'ensemble",
+            "Présence de variables catégorielles nécessite un encoding",
+            "Quelques valeurs manquantes détectées dans 3 colonnes",
+            "Distribution des classes relativement équilibrée",
+            "Variables numériques montrent des corrélations intéressantes"
+        ]
+    };
+}
+
+function resetMLPreview() {
+    document.getElementById('mlDataPreview').innerHTML = `
+        <div class="text-center py-5">
+            <i class="fas fa-database fa-3x text-muted mb-3"></i>
+            <h5 class="text-muted">Sélectionnez un dataset</h5>
+            <p class="text-muted">L'aperçu et les recommandations apparaîtront ici</p>
+        </div>
+    `;
+    
+    document.getElementById('recommendedAlgorithms').innerHTML = `
+        <div class="text-center text-muted">
+            <i class="fas fa-info-circle fa-2x mb-2"></i>
+            <p class="small">Sélectionnez un dataset pour voir les algorithmes recommandés</p>
+        </div>
+    `;
+}
+
+function loadDatasetColumns(datasetId) {
+    const targetColumnSelect = document.getElementById('targetColumnML');
+    targetColumnSelect.innerHTML = '<option value="">Sélectionner...</option>';
+    
+    // Simuler le chargement des colonnes
+    const mockColumns = ['churn', 'revenue', 'category', 'satisfaction_score', 'age', 'duration'];
+    mockColumns.forEach(col => {
+        const option = document.createElement('option');
+        option.value = col;
+        option.textContent = col;
+        targetColumnSelect.appendChild(option);
+    });
+}
+
+function startAutoML() {
+    const formData = {
+        project_name: document.getElementById('mlProjectName').value,
+        dataset_id: parseInt(document.getElementById('mlDatasetSelect').value),
+        problem_type: document.getElementById('problemType').value,
+        target_column: document.getElementById('targetColumnML').value,
+        performance_goal: document.getElementById('performanceGoal').value,
+        max_training_time: document.getElementById('maxTrainingTime').value,
+        enable_ensemble: document.getElementById('enableEnsemble').checked,
+        enable_feature_engineering: document.getElementById('enableFeatureEngineering').checked,
+        enable_explainability: document.getElementById('enableExplainability').checked
+    };
+    
+    if (!formData.project_name || !formData.dataset_id) {
+        alert('Veuillez remplir tous les champs requis');
+        return;
+    }
+    
+    // Afficher le modal d'entraînement
+    const modal = new bootstrap.Modal(document.getElementById('autoMLModal'));
+    modal.show();
+    
+    // Initialiser l'interface
+    document.getElementById('automlProjectName').textContent = formData.project_name;
+    document.getElementById('automlElapsedTime').textContent = '00:00:00';
+    document.getElementById('automlProgressText').textContent = '0%';
+    document.getElementById('automlMainProgress').style.width = '0%';
+    
+    // Démarrer la simulation d'entraînement
+    simulateAutoMLTraining();
+}
+
+function simulateAutoMLTraining() {
+    const steps = [
+        { id: 1, name: 'Préparation des données', duration: 3000 },
+        { id: 2, name: 'Feature Engineering', duration: 4000 },
+        { id: 3, name: 'Sélection d\'algorithmes', duration: 2000 },
+        { id: 4, name: 'Entraînement des modèles', duration: 8000 },
+        { id: 5, name: 'Évaluation et sélection', duration: 3000 }
+    ];
+    
+    const algorithms = [
+        'Random Forest', 'XGBoost', 'Logistic Regression', 
+        'SVM', 'Neural Network', 'Gradient Boosting', 
+        'Decision Tree', 'Naive Bayes'
+    ];
+    
+    let currentStep = 0;
+    let startTime = new Date();
+    
+    // Mettre à jour le timer
+    const timerInterval = setInterval(() => {
+        const elapsed = new Date() - startTime;
+        const hours = Math.floor(elapsed / 3600000);
+        const minutes = Math.floor((elapsed % 3600000) / 60000);
+        const seconds = Math.floor((elapsed % 60000) / 1000);
+        
+        document.getElementById('automlElapsedTime').textContent = 
+            `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+    }, 1000);
+    
+    function executeStep() {
+        if (currentStep >= steps.length) {
+            // Entraînement terminé
+            clearInterval(timerInterval);
+            document.getElementById('automlProgressText').textContent = '100%';
+            document.getElementById('automlMainProgress').style.width = '100%';
+            document.getElementById('closeAutoMLBtn').disabled = false;
+            
+            addAutoMLLog('[TERMINÉ] AutoML terminé avec succès! Meilleur modèle: XGBoost (Précision: 94.2%)', 'success');
+            alert('AutoML terminé! Le meilleur modèle a été sélectionné et déployé.');
+            return;
+        }
+        
+        const step = steps[currentStep];
+        
+        // Marquer l'étape comme en cours
+        document.getElementById(`step-${step.id}-status`).innerHTML = 
+            '<i class="fas fa-spinner fa-spin me-1"></i>En cours';
+        document.getElementById(`step-${step.id}-status`).className = 'badge bg-warning';
+        
+        addAutoMLLog(`[ÉTAPE ${step.id}] Démarrage: ${step.name}`, 'info');
+        
+        // Simuler l'étape
+        if (step.id === 4) {
+            // Étape d'entraînement - tester plusieurs algorithmes
+            simulateModelTesting(algorithms);
+        }
+        
+        setTimeout(() => {
+            // Marquer l'étape comme terminée
+            document.getElementById(`step-${step.id}-status`).innerHTML = 
+                '<i class="fas fa-check me-1"></i>Terminé';
+            document.getElementById(`step-${step.id}-status`).className = 'badge bg-success';
+            
+            addAutoMLLog(`[ÉTAPE ${step.id}] Terminé: ${step.name}`, 'success');
+            
+            // Mettre à jour la progression
+            const progress = ((currentStep + 1) / steps.length) * 100;
+            document.getElementById('automlMainProgress').style.width = progress + '%';
+            document.getElementById('automlProgressText').textContent = Math.round(progress) + '%';
+            
+            currentStep++;
+            executeStep();
+        }, step.duration);
+    }
+    
+    executeStep();
+}
+
+function simulateModelTesting(algorithms) {
+    const testedModelsContainer = document.getElementById('testedModels');
+    testedModelsContainer.innerHTML = '<small class="text-muted">Test des algorithmes en cours...</small>';
+    
+    algorithms.forEach((algo, index) => {
+        setTimeout(() => {
+            const score = (Math.random() * 0.3 + 0.7).toFixed(3); // Score entre 0.7 et 1.0
+            const modelResult = document.createElement('div');
+            modelResult.className = 'model-result mb-1 p-1 border-bottom';
+            modelResult.innerHTML = `
+                <div class="d-flex justify-content-between align-items-center">
+                    <small><strong>${algo}</strong></small>
+                    <span class="badge bg-${parseFloat(score) > 0.9 ? 'success' : parseFloat(score) > 0.8 ? 'info' : 'warning'}">
+                        ${(parseFloat(score) * 100).toFixed(1)}%
+                    </span>
+                </div>
+            `;
+            
+            if (index === 0) {
+                testedModelsContainer.innerHTML = '';
+            }
+            testedModelsContainer.appendChild(modelResult);
+            
+            addAutoMLLog(`[MODEL] ${algo} testé - Score: ${(parseFloat(score) * 100).toFixed(1)}%`, 'info');
+        }, index * 800);
+    });
+}
+
+function addAutoMLLog(message, type = 'info') {
+    const logsContainer = document.getElementById('automlLogs');
+    const logEntry = document.createElement('div');
+    logEntry.className = 'log-entry';
+    
+    let color = 'text-light';
+    if (type === 'success') color = 'text-success';
+    else if (type === 'error') color = 'text-danger';
+    else if (type === 'warning') color = 'text-warning';
+    else if (type === 'info') color = 'text-info';
+    
+    const timestamp = new Date().toLocaleTimeString();
+    logEntry.innerHTML = `<span class="${color}">[${timestamp}] ${message}</span>`;
+    logsContainer.appendChild(logEntry);
+    logsContainer.scrollTop = logsContainer.scrollHeight;
+}
+
+// Fonctions de gestion des modèles
+function makePrediction(modelId) {
+    const modal = new bootstrap.Modal(document.getElementById('predictionModal'));
+    
+    // Simuler les informations du modèle
+    const modelNames = {
+        1: 'Prédiction Churn',
+        2: 'Prévision Ventes',
+        3: 'Segmentation Clients'
+    };
+    
+    document.getElementById('selectedModelName').value = modelNames[modelId] || `Modèle #${modelId}`;
+    
+    // Générer les champs d'entrée pour la prédiction
+    generatePredictionInputs(modelId);
+    
+    modal.show();
+}
+
+function generatePredictionInputs(modelId) {
+    const container = document.getElementById('predictionInputs');
+    container.innerHTML = '';
+    
+    // Simuler les features selon le modèle
+    const features = {
+        1: [
+            { name: 'age', label: 'Âge', type: 'number', placeholder: '35' },
+            { name: 'monthly_charges', label: 'Charges Mensuelles', type: 'number', placeholder: '65.50' },
+            { name: 'contract_type', label: 'Type Contrat', type: 'select', options: ['Monthly', 'One year', 'Two year'] },
+            { name: 'total_charges', label: 'Charges Totales', type: 'number', placeholder: '2500.30' }
+        ],
+        2: [
+            { name: 'month', label: 'Mois', type: 'number', placeholder: '12' },
+            { name: 'marketing_spend', label: 'Budget Marketing', type: 'number', placeholder: '15000' },
+            { name: 'seasonal_factor', label: 'Facteur Saisonnier', type: 'number', placeholder: '1.2' }
+        ],
+        3: [
+            { name: 'recency', label: 'Récence (jours)', type: 'number', placeholder: '30' },
+            { name: 'frequency', label: 'Fréquence', type: 'number', placeholder: '5' },
+            { name: 'monetary', label: 'Montant', type: 'number', placeholder: '250.80' }
+        ]
+    };
+    
+    const modelFeatures = features[modelId] || features[1];
+    
+    modelFeatures.forEach(feature => {
+        const colDiv = document.createElement('div');
+        colDiv.className = 'col-md-6 mb-3';
+        
+        if (feature.type === 'select') {
+            colDiv.innerHTML = `
+                <label class="form-label">${feature.label}</label>
+                <select class="form-control" name="${feature.name}">
+                    ${feature.options.map(opt => `<option value="${opt}">${opt}</option>`).join('')}
+                </select>
+            `;
+        } else {
+            colDiv.innerHTML = `
+                <label class="form-label">${feature.label}</label>
+                <input type="${feature.type}" class="form-control" name="${feature.name}" 
+                       placeholder="${feature.placeholder}">
+            `;
+        }
+        
+        container.appendChild(colDiv);
+    });
+}
+
+function viewModelDetails(modelId) {
+    alert(`Affichage des détails du modèle #${modelId}`);
+}
+
+function retrainModel(modelId) {
+    if (confirm('Voulez-vous vraiment re-entraîner ce modèle ?')) {
+        alert(`Re-entraînement du modèle #${modelId} démarré`);
+    }
+}
+
+function exportModel(modelId) {
+    alert(`Export du modèle #${modelId} en cours...`);
+}
+
+function viewTrainingProgress(modelId) {
+    alert(`Affichage de la progression d'entraînement du modèle #${modelId}`);
+}
+
+function stopTraining(modelId) {
+    if (confirm('Voulez-vous arrêter l\'entraînement en cours ?')) {
+        alert(`Entraînement du modèle #${modelId} arrêté`);
+    }
+}
+
+function viewClusters(modelId) {
+    alert(`Affichage des clusters du modèle #${modelId}`);
+}
+
+function compareModels() {
+    const selectedModels = Array.from(document.querySelectorAll('.model-checkbox:checked'));
+    if (selectedModels.length < 2) {
+        alert('Sélectionnez au moins 2 modèles pour les comparer');
+        return;
+    }
+    
+    alert(`Comparaison de ${selectedModels.length} modèles...`);
+}
+
+// Gestion de la sélection multiple
+document.getElementById('selectAllModels')?.addEventListener('change', function() {
+    document.querySelectorAll('.model-checkbox').forEach(checkbox => {
+        checkbox.checked = this.checked;
+    });
+});
+</script>
+{% endblock %}

@@ -1,0 +1,313 @@
+{% extends "base.html" %}
+
+{% block title %}Upload Dataset - DataCleaner Pro{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">
+        <i class="fas fa-upload me-2"></i>
+        Upload Dataset
+    </h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <div class="btn-group me-2">
+            <a href="{{ url_for('main.dashboard') }}" class="btn btn-sm btn-outline-secondary">
+                <i class="fas fa-arrow-left"></i> Retour au Dashboard
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- Quota et informations -->
+<div class="row mb-4">
+    <div class="col-lg-12">
+        <div class="alert alert-info">
+            <div class="row">
+                <div class="col-md-8">
+                    <h5><i class="fas fa-info-circle me-2"></i>Informations sur l'upload</h5>
+                    <ul class="mb-0">
+                        <li>Formats supportés: CSV, Excel (.xlsx, .xls), JSON, TSV</li>
+                        <li>Taille maximum: 500 MB par fichier</li>
+                        <li>Encodage recommandé: UTF-8</li>
+                    </ul>
+                </div>
+                <div class="col-md-4 text-end">
+                    <h6>Quota d'utilisation</h6>
+                    <div class="progress">
+                        <div class="progress-bar" role="progressbar" style="width: {{ current_user.get_quota_percentage() }}%">
+                            {{ "%.1f"|format(current_user.get_quota_percentage()) }}%
+                        </div>
+                    </div>
+                    <small class="text-muted">
+                        {{ "%.1f"|format(current_user.quota_used) }} / {{ "%.0f"|format(current_user.quota_limit) }} MB utilisés
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Formulaire d'upload -->
+<div class="row">
+    <div class="col-lg-8 mx-auto">
+        <div class="card shadow">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-file-upload me-2"></i>
+                    Sélectionner un fichier
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" enctype="multipart/form-data" id="uploadForm">
+                    {{ form.hidden_tag() }}
+                    
+                    <div class="mb-3">
+                        {{ form.dataset_name.label(class="form-label") }}
+                        {{ form.dataset_name(class="form-control", placeholder="Entrez le nom de votre dataset") }}
+                        {% for error in form.dataset_name.errors %}
+                            <div class="text-danger small">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+                    
+                    <div class="mb-3">
+                        {{ form.file.label(class="form-label") }}
+                        <div class="file-upload-wrapper">
+                            {{ form.file(class="form-control", id="fileInput", accept=".csv,.xlsx,.xls,.json,.tsv") }}
+                            <div class="file-upload-info mt-2" id="fileInfo" style="display: none;">
+                                <div class="alert alert-light">
+                                    <div class="row align-items-center">
+                                        <div class="col-auto">
+                                            <i class="fas fa-file fa-2x text-muted"></i>
+                                        </div>
+                                        <div class="col">
+                                            <strong id="fileName"></strong><br>
+                                            <small class="text-muted">
+                                                <span id="fileSize"></span> • 
+                                                <span id="fileType"></span>
+                                            </small>
+                                        </div>
+                                        <div class="col-auto">
+                                            <button type="button" class="btn btn-sm btn-outline-danger" onclick="clearFile()">
+                                                <i class="fas fa-times"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% for error in form.file.errors %}
+                            <div class="text-danger small">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+                    
+                    <!-- Zone de drag & drop -->
+                    <div class="drag-drop-zone" id="dragDropZone">
+                        <div class="text-center py-5">
+                            <i class="fas fa-cloud-upload-alt fa-3x text-muted mb-3"></i>
+                            <h5 class="text-muted">Glissez-déposez votre fichier ici</h5>
+                            <p class="text-muted">ou cliquez pour sélectionner un fichier</p>
+                        </div>
+                    </div>
+                    
+                    <!-- Barre de progression -->
+                    <div class="progress mt-3" id="uploadProgress" style="display: none;">
+                        <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 0%"></div>
+                    </div>
+                    
+                    <div class="d-grid gap-2 mt-4">
+                        {{ form.submit(class="btn btn-primary btn-lg", id="submitBtn", disabled=True) }}
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Guide d'utilisation -->
+<div class="row mt-5">
+    <div class="col-lg-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-question-circle me-2"></i>
+                    Guide d'utilisation
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6><i class="fas fa-file-csv text-success me-2"></i>Fichiers CSV</h6>
+                        <ul class="small text-muted">
+                            <li>Délimiteur recommandé: virgule (,)</li>
+                            <li>Première ligne: noms des colonnes</li>
+                            <li>Encodage: UTF-8 de préférence</li>
+                        </ul>
+                        
+                        <h6><i class="fas fa-file-excel text-primary me-2"></i>Fichiers Excel</h6>
+                        <ul class="small text-muted">
+                            <li>Formats supportés: .xlsx, .xls</li>
+                            <li>Première feuille utilisée par défaut</li>
+                            <li>En-têtes en première ligne</li>
+                        </ul>
+                    </div>
+                    <div class="col-md-6">
+                        <h6><i class="fas fa-file-code text-warning me-2"></i>Fichiers JSON</h6>
+                        <ul class="small text-muted">
+                            <li>Format: tableau d'objets</li>
+                            <li>Clés consistantes pour les colonnes</li>
+                            <li>Support JSON Lines (.jsonl)</li>
+                        </ul>
+                        
+                        <h6><i class="fas fa-file-alt text-info me-2"></i>Fichiers TSV</h6>
+                        <ul class="small text-muted">
+                            <li>Délimiteur: tabulation</li>
+                            <li>Structure similaire au CSV</li>
+                            <li>Encodage UTF-8 recommandé</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.drag-drop-zone {
+    border: 2px dashed #dee2e6;
+    border-radius: 10px;
+    background-color: #f8f9fa;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.drag-drop-zone:hover, .drag-drop-zone.dragover {
+    border-color: #007bff;
+    background-color: #e3f2fd;
+}
+
+.file-upload-wrapper {
+    position: relative;
+}
+
+#fileInput {
+    position: relative;
+    z-index: 2;
+}
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const fileInput = document.getElementById('fileInput');
+    const dragDropZone = document.getElementById('dragDropZone');
+    const fileInfo = document.getElementById('fileInfo');
+    const submitBtn = document.getElementById('submitBtn');
+    const uploadForm = document.getElementById('uploadForm');
+    const uploadProgress = document.getElementById('uploadProgress');
+    
+    // Gestion du drag & drop
+    dragDropZone.addEventListener('click', function() {
+        fileInput.click();
+    });
+    
+    dragDropZone.addEventListener('dragover', function(e) {
+        e.preventDefault();
+        dragDropZone.classList.add('dragover');
+    });
+    
+    dragDropZone.addEventListener('dragleave', function(e) {
+        e.preventDefault();
+        dragDropZone.classList.remove('dragover');
+    });
+    
+    dragDropZone.addEventListener('drop', function(e) {
+        e.preventDefault();
+        dragDropZone.classList.remove('dragover');
+        
+        const files = e.dataTransfer.files;
+        if (files.length > 0) {
+            fileInput.files = files;
+            handleFileSelect();
+        }
+    });
+    
+    // Gestion de la sélection de fichier
+    fileInput.addEventListener('change', handleFileSelect);
+    
+    function handleFileSelect() {
+        const file = fileInput.files[0];
+        if (file) {
+            // Vérifier la taille du fichier
+            const maxSize = 500 * 1024 * 1024; // 500MB
+            if (file.size > maxSize) {
+                alert('Le fichier est trop volumineux. Taille maximum: 500MB');
+                clearFile();
+                return;
+            }
+            
+            // Vérifier le type de fichier
+            const allowedTypes = ['csv', 'xlsx', 'xls', 'json', 'tsv'];
+            const fileExtension = file.name.split('.').pop().toLowerCase();
+            if (!allowedTypes.includes(fileExtension)) {
+                alert('Type de fichier non supporté. Utilisez: CSV, Excel, JSON, TSV');
+                clearFile();
+                return;
+            }
+            
+            // Afficher les informations du fichier
+            document.getElementById('fileName').textContent = file.name;
+            document.getElementById('fileSize').textContent = formatFileSize(file.size);
+            document.getElementById('fileType').textContent = fileExtension.toUpperCase();
+            
+            fileInfo.style.display = 'block';
+            dragDropZone.style.display = 'none';
+            submitBtn.disabled = false;
+        }
+    }
+    
+    function clearFile() {
+        fileInput.value = '';
+        fileInfo.style.display = 'none';
+        dragDropZone.style.display = 'block';
+        submitBtn.disabled = true;
+    }
+    
+    window.clearFile = clearFile;
+    
+    function formatFileSize(bytes) {
+        if (bytes === 0) return '0 Bytes';
+        const k = 1024;
+        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    }
+    
+    // Gestion de la soumission du formulaire
+    uploadForm.addEventListener('submit', function(e) {
+        if (!fileInput.files[0]) {
+            e.preventDefault();
+            alert('Veuillez sélectionner un fichier');
+            return;
+        }
+        
+        // Afficher la barre de progression
+        uploadProgress.style.display = 'block';
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Upload en cours...';
+        
+        // Simuler la progression (à remplacer par une vraie progression AJAX)
+        let progress = 0;
+        const progressBar = uploadProgress.querySelector('.progress-bar');
+        const interval = setInterval(function() {
+            progress += Math.random() * 15;
+            if (progress > 95) progress = 95;
+            progressBar.style.width = progress + '%';
+            
+            if (progress >= 95) {
+                clearInterval(interval);
+            }
+        }, 200);
+    });
+});
+</script>
+{% endblock %}

@@ -1,0 +1,941 @@
+{% extends "base.html" %}
+
+{% block title %}Analyse {{ analysis.name }} - DataCleaner-Pro{% endblock %}
+
+{% block guest_content %}
+<!-- En-tête -->
+<div class="row mb-4">
+    <div class="col-12">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{{ url_for('main.dashboard') }}">Dashboard</a></li>
+                <li class="breadcrumb-item"><a href="{{ url_for('main.list_datasets') }}">Datasets</a></li>
+                <li class="breadcrumb-item"><a href="{{ url_for('main.view_dataset', dataset_id=analysis.dataset.id) }}">{{ analysis.dataset.name }}</a></li>
+                <li class="breadcrumb-item active">Analyse</li>
+            </ol>
+        </nav>
+        
+        <div class="d-flex align-items-center justify-content-between">
+            <div>
+                <h1 class="display-6 text-primary mb-0">
+                    <i class="fas fa-chart-line me-3"></i>
+                    {{ analysis.name }}
+                </h1>
+                <p class="text-muted mb-0">
+                    Analyse {{ analysis.analysis_type }} • 
+                    {{ format_datetime_global(analysis.created_at) }}
+                    {% if analysis.execution_time %}
+                        • Exécutée en {{ "%.1f"|format(analysis.execution_time) }}s
+                    {% endif %}
+                </p>
+            </div>
+            
+            <div class="btn-group" role="group">
+                <button class="btn btn-outline-primary" onclick="exportAnalysis()">
+                    <i class="fas fa-download me-1"></i>Export PDF
+                </button>
+                <button class="btn btn-outline-success" onclick="shareAnalysis()">
+                    <i class="fas fa-share-alt me-1"></i>Partager
+                </button>
+                <div class="dropdown">
+                    <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                        <i class="fas fa-ellipsis-v"></i>
+                    </button>
+                    <ul class="dropdown-menu">
+                        <li><a class="dropdown-item" href="#" onclick="duplicateAnalysis()">
+                            <i class="fas fa-copy me-2"></i>Dupliquer
+                        </a></li>
+                        <li><a class="dropdown-item" href="#" onclick="scheduleAnalysis()">
+                            <i class="fas fa-clock me-2"></i>Programmer
+                        </a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item text-danger" href="#" onclick="deleteAnalysis()">
+                            <i class="fas fa-trash me-2"></i>Supprimer
+                        </a></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Résumé de l'analyse -->
+<div class="row mb-4">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-info-circle me-2"></i>Résumé de l'Analyse
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <dl class="row">
+                            <dt class="col-sm-5">Type d'analyse:</dt>
+                            <dd class="col-sm-7">
+                                <span class="badge bg-primary">{{ analysis.analysis_type.title() }}</span>
+                            </dd>
+                            
+                            <dt class="col-sm-5">Dataset:</dt>
+                            <dd class="col-sm-7">
+                                <a href="{{ url_for('main.view_dataset', dataset_id=analysis.dataset.id) }}" class="text-decoration-none">
+                                    {{ analysis.dataset.name }}
+                                </a>
+                            </dd>
+                            
+                            <dt class="col-sm-5">Lignes analysées:</dt>
+                            <dd class="col-sm-7">{{ "{:,}".format(analysis.dataset.rows_count) if analysis.dataset.rows_count else 'N/A' }}</dd>
+                            
+                            <dt class="col-sm-5">Colonnes:</dt>
+                            <dd class="col-sm-7">{{ analysis.dataset.columns_count if analysis.dataset.columns_count else 'N/A' }}</dd>
+                        </dl>
+                    </div>
+                    <div class="col-md-6">
+                        <dl class="row">
+                            <dt class="col-sm-5">Créée le:</dt>
+                            <dd class="col-sm-7">{{ format_datetime_global(analysis.created_at) }}</dd>
+                            
+                            <dt class="col-sm-5">Temps d'exécution:</dt>
+                            <dd class="col-sm-7">
+                                {% if analysis.execution_time %}
+                                    {{ "%.1f"|format(analysis.execution_time) }} secondes
+                                {% else %}
+                                    N/A
+                                {% endif %}
+                            </dd>
+                            
+                            <dt class="col-sm-5">Insights générés:</dt>
+                            <dd class="col-sm-7">
+                                <span class="badge bg-info">{{ analysis.get_insights() | length }}</span>
+                            </dd>
+                            
+                            <dt class="col-sm-5">Visualisations:</dt>
+                            <dd class="col-sm-7">
+                                <span class="badge bg-success">{{ analysis.get_visualizations() | length }}</span>
+                            </dd>
+                        </dl>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card bg-gradient-info text-white">
+            <div class="card-body text-center">
+                <i class="fas fa-award fa-3x mb-3"></i>
+                <h5>Score de Qualité</h5>
+                {% set results = analysis.get_results_data() %}
+                {% if results and results.get('data_quality_score') %}
+                    <h2 class="mb-0">{{ "%.0f"|format(results.data_quality_score) }}%</h2>
+                    <p class="mb-0">
+                        {% if results.data_quality_score >= 90 %}Excellente
+                        {% elif results.data_quality_score >= 80 %}Très bonne
+                        {% elif results.data_quality_score >= 70 %}Bonne
+                        {% elif results.data_quality_score >= 60 %}Correcte
+                        {% else %}À améliorer{% endif %}
+                    </p>
+                {% else %}
+                    <h2 class="mb-0">N/A</h2>
+                    <p class="mb-0">Non calculé</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Insights IA -->
+{% if analysis.get_insights() %}
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">
+                    <i class="fas fa-lightbulb me-2"></i>Insights IA
+                </h5>
+                <span class="badge bg-warning">{{ analysis.get_insights() | length }} découvertes</span>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    {% for insight in analysis.get_insights() %}
+                    <div class="col-md-6 mb-3">
+                        <div class="insight-card h-100 p-3 border rounded
+                                   {% if insight.priority == 'high' %}border-danger
+                                   {% elif insight.priority == 'medium' %}border-warning
+                                   {% else %}border-info{% endif %}">
+                            <div class="d-flex align-items-start">
+                                <div class="me-3">
+                                    {% if insight.type == 'data_quality' %}
+                                        <i class="fas fa-shield-alt text-primary fa-2x"></i>
+                                    {% elif insight.type == 'correlation' %}
+                                        <i class="fas fa-project-diagram text-success fa-2x"></i>
+                                    {% elif insight.type == 'distribution' %}
+                                        <i class="fas fa-chart-area text-info fa-2x"></i>
+                                    {% elif insight.type == 'ml_performance' %}
+                                        <i class="fas fa-robot text-warning fa-2x"></i>
+                                    {% elif insight.type == 'clustering' %}
+                                        <i class="fas fa-sitemap text-secondary fa-2x"></i>
+                                    {% else %}
+                                        <i class="fas fa-exclamation-circle text-primary fa-2x"></i>
+                                    {% endif %}
+                                </div>
+                                <div class="flex-grow-1">
+                                    <h6 class="fw-bold mb-2">{{ insight.title }}</h6>
+                                    <p class="mb-2">{{ insight.message }}</p>
+                                    {% if insight.recommendation %}
+                                        <div class="alert alert-light py-2 px-3 mb-0">
+                                            <small>
+                                                <i class="fas fa-arrow-right me-1"></i>
+                                                <strong>Recommandation:</strong> {{ insight.recommendation }}
+                                            </small>
+                                        </div>
+                                    {% endif %}
+                                    {% if insight.actionable %}
+                                        <div class="mt-2">
+                                            <button class="btn btn-sm btn-outline-primary" onclick="applyRecommendation('{{ insight.type }}')">
+                                                <i class="fas fa-play me-1"></i>Appliquer
+                                            </button>
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Visualisations -->
+{% if analysis.get_visualizations() %}
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">
+                    <i class="fas fa-chart-bar me-2"></i>Visualisations
+                </h5>
+                <div class="btn-group btn-group-sm" role="group">
+                    <input type="radio" class="btn-check" name="vizMode" id="vizGrid" checked>
+                    <label class="btn btn-outline-secondary" for="vizGrid">
+                        <i class="fas fa-th"></i>
+                    </label>
+                    <input type="radio" class="btn-check" name="vizMode" id="vizSlider">
+                    <label class="btn btn-outline-secondary" for="vizSlider">
+                        <i class="fas fa-arrows-alt-h"></i>
+                    </label>
+                </div>
+            </div>
+            <div class="card-body">
+                <div id="visualizationsContainer">
+                    {% for viz_name, viz_data in analysis.get_visualizations().items() %}
+                    <div class="visualization-item mb-4">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h6 class="mb-0">{{ viz_data.title or viz_name.title() }}</h6>
+                            <div class="btn-group btn-group-sm" role="group">
+                                <button class="btn btn-outline-primary" onclick="fullscreenViz('{{ viz_name }}')">
+                                    <i class="fas fa-expand"></i>
+                                </button>
+                                <button class="btn btn-outline-secondary" onclick="downloadViz('{{ viz_name }}')">
+                                    <i class="fas fa-download"></i>
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div class="viz-container border rounded p-3 bg-light">
+                            {% if viz_data.type == 'plotly' %}
+                                <div id="plotly-{{ viz_name }}" style="width: 100%; height: 400px;"></div>
+                            {% elif viz_data.type == 'image' %}
+                                <img src="{{ viz_data.data }}" class="img-fluid" alt="{{ viz_data.title }}" style="max-height: 400px;">
+                            {% else %}
+                                <div class="text-center py-5">
+                                    <i class="fas fa-chart-bar fa-3x text-muted mb-3"></i>
+                                    <p class="text-muted">Type de visualisation non supporté: {{ viz_data.type }}</p>
+                                </div>
+                            {% endif %}
+                        </div>
+                        
+                        {% if viz_data.description %}
+                        <small class="text-muted mt-2 d-block">{{ viz_data.description }}</small>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Résultats détaillés -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">
+                    <i class="fas fa-table me-2"></i>Résultats Détaillés
+                </h5>
+                <button class="btn btn-sm btn-outline-secondary" onclick="toggleDetails()">
+                    <i class="fas fa-chevron-down" id="detailsToggleIcon"></i>
+                </button>
+            </div>
+            <div class="collapse show" id="detailsSection">
+                <div class="card-body">
+                    {% set results = analysis.get_results_data() %}
+                    {% if results %}
+                        <!-- Onglets pour organiser les résultats -->
+                        <ul class="nav nav-tabs" id="resultsTab" role="tablist">
+                            {% if results.get('descriptive_stats') %}
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link active" id="stats-tab" data-bs-toggle="tab" data-bs-target="#stats" type="button">
+                                    <i class="fas fa-calculator me-1"></i>Statistiques
+                                </button>
+                            </li>
+                            {% endif %}
+                            {% if results.get('correlation_matrix') %}
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link" id="correlation-tab" data-bs-toggle="tab" data-bs-target="#correlation" type="button">
+                                    <i class="fas fa-project-diagram me-1"></i>Corrélations
+                                </button>
+                            </li>
+                            {% endif %}
+                            {% if results.get('classification_results') or results.get('regression_results') %}
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link" id="ml-tab" data-bs-toggle="tab" data-bs-target="#ml" type="button">
+                                    <i class="fas fa-robot me-1"></i>Machine Learning
+                                </button>
+                            </li>
+                            {% endif %}
+                            {% if results.get('clustering_results') %}
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link" id="clustering-tab" data-bs-toggle="tab" data-bs-target="#clustering" type="button">
+                                    <i class="fas fa-sitemap me-1"></i>Clustering
+                                </button>
+                            </li>
+                            {% endif %}
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link" id="raw-tab" data-bs-toggle="tab" data-bs-target="#raw" type="button">
+                                    <i class="fas fa-code me-1"></i>Données Brutes
+                                </button>
+                            </li>
+                        </ul>
+                        
+                        <div class="tab-content mt-3" id="resultsTabContent">
+                            <!-- Statistiques descriptives -->
+                            {% if results.get('descriptive_stats') %}
+                            <div class="tab-pane fade show active" id="stats" role="tabpanel">
+                                <div class="table-responsive">
+                                    <table class="table table-hover">
+                                        <thead class="table-dark">
+                                            <tr>
+                                                <th>Colonne</th>
+                                                <th>Moyenne</th>
+                                                <th>Médiane</th>
+                                                <th>Écart-type</th>
+                                                <th>Min</th>
+                                                <th>Max</th>
+                                                <th>Asymétrie</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for column, stats in results.descriptive_stats.summary.items() %}
+                                            <tr>
+                                                <td><strong>{{ column }}</strong></td>
+                                                <td>{{ "%.2f"|format(stats.mean) if stats.mean is defined else 'N/A' }}</td>
+                                                <td>{{ "%.2f"|format(stats['50%']) if stats['50%'] is defined else 'N/A' }}</td>
+                                                <td>{{ "%.2f"|format(stats.std) if stats.std is defined else 'N/A' }}</td>
+                                                <td>{{ "%.2f"|format(stats.min) if stats.min is defined else 'N/A' }}</td>
+                                                <td>{{ "%.2f"|format(stats.max) if stats.max is defined else 'N/A' }}</td>
+                                                <td>
+                                                    {% if results.descriptive_stats.skewness and results.descriptive_stats.skewness[column] is defined %}
+                                                        {% set skew = results.descriptive_stats.skewness[column] %}
+                                                        <span class="badge 
+                                                                   {% if skew|abs < 0.5 %}bg-success
+                                                                   {% elif skew|abs < 1 %}bg-warning
+                                                                   {% else %}bg-danger{% endif %}">
+                                                            {{ "%.2f"|format(skew) }}
+                                                        </span>
+                                                    {% else %}
+                                                        N/A
+                                                    {% endif %}
+                                                </td>
+                                            </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                            {% endif %}
+                            
+                            <!-- Matrice de corrélation -->
+                            {% if results.get('correlation_matrix') %}
+                            <div class="tab-pane fade" id="correlation" role="tabpanel">
+                                <div class="row">
+                                    <div class="col-md-8">
+                                        <div class="table-responsive">
+                                            <table class="table table-sm">
+                                                <thead class="table-dark">
+                                                    <tr>
+                                                        <th></th>
+                                                        {% for col in results.correlation_matrix.keys() %}
+                                                        <th class="text-center small">{{ col[:8] }}{% if col|length > 8 %}...{% endif %}</th>
+                                                        {% endfor %}
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {% for row_name, row_data in results.correlation_matrix.items() %}
+                                                    <tr>
+                                                        <th class="small">{{ row_name }}</th>
+                                                        {% for col_name, value in row_data.items() %}
+                                                        <td class="text-center p-1">
+                                                            {% if value is not none %}
+                                                                <span class="badge badge-correlation" 
+                                                                      style="background-color: {{ get_correlation_color(value) }}">
+                                                                    {{ "%.2f"|format(value) }}
+                                                                </span>
+                                                            {% else %}
+                                                                -
+                                                            {% endif %}
+                                                        </td>
+                                                        {% endfor %}
+                                                    </tr>
+                                                    {% endfor %}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        {% if results.get('strong_correlations') %}
+                                        <h6>Corrélations Fortes</h6>
+                                        <div class="list-group list-group-flush">
+                                            {% for corr in results.strong_correlations[:5] %}
+                                            <div class="list-group-item px-0 py-2">
+                                                <div class="d-flex justify-content-between align-items-center">
+                                                    <div>
+                                                        <small class="fw-bold">{{ corr.column1 }} ↔ {{ corr.column2 }}</small>
+                                                    </div>
+                                                    <span class="badge 
+                                                               {% if corr.correlation|abs > 0.8 %}bg-danger
+                                                               {% else %}bg-warning{% endif %}">
+                                                        {{ "%.2f"|format(corr.correlation) }}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                            {% endfor %}
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                            {% endif %}
+                            
+                            <!-- Résultats ML -->
+                            {% if results.get('classification_results') or results.get('regression_results') %}
+                            <div class="tab-pane fade" id="ml" role="tabpanel">
+                                {% if results.get('classification_results') %}
+                                    {% set ml_results = results.classification_results %}
+                                    <h6>Résultats de Classification</h6>
+                                    <div class="row mb-3">
+                                        <div class="col-md-3">
+                                            <div class="card text-center">
+                                                <div class="card-body">
+                                                    <h4 class="text-primary">{{ "%.1f"|format(ml_results.accuracy * 100) }}%</h4>
+                                                    <small class="text-muted">Précision</small>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <div class="card text-center">
+                                                <div class="card-body">
+                                                    <h4 class="text-info">{{ ml_results.n_classes }}</h4>
+                                                    <small class="text-muted">Classes</small>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="card">
+                                                <div class="card-body">
+                                                    <h6>Top Features</h6>
+                                                    {% for feature in ml_results.top_features[:3] %}
+                                                    <span class="badge bg-primary me-1">{{ feature }}</span>
+                                                    {% endfor %}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                {% elif results.get('regression_results') %}
+                                    {% set ml_results = results.regression_results %}
+                                    <h6>Résultats de Régression</h6>
+                                    <div class="row mb-3">
+                                        <div class="col-md-3">
+                                            <div class="card text-center">
+                                                <div class="card-body">
+                                                    <h4 class="text-primary">{{ "%.3f"|format(ml_results.r2_score) }}</h4>
+                                                    <small class="text-muted">R² Score</small>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <div class="card text-center">
+                                                <div class="card-body">
+                                                    <h4 class="text-info">{{ "%.2f"|format(ml_results.rmse) }}</h4>
+                                                    <small class="text-muted">RMSE</small>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="card">
+                                                <div class="card-body">
+                                                    <h6>Top Features</h6>
+                                                    {% for feature in ml_results.top_features[:3] %}
+                                                    <span class="badge bg-success me-1">{{ feature }}</span>
+                                                    {% endfor %}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                {% endif %}
+                            </div>
+                            {% endif %}
+                            
+                            <!-- Résultats clustering -->
+                            {% if results.get('clustering_results') %}
+                            <div class="tab-pane fade" id="clustering" role="tabpanel">
+                                {% set cluster_results = results.clustering_results %}
+                                <h6>Résultats de Clustering</h6>
+                                <div class="row mb-3">
+                                    <div class="col-md-4">
+                                        <div class="card text-center">
+                                            <div class="card-body">
+                                                <h4 class="text-primary">{{ cluster_results.optimal_clusters }}</h4>
+                                                <small class="text-muted">Clusters optimaux</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="card text-center">
+                                            <div class="card-body">
+                                                <h4 class="text-success">{{ "%.3f"|format(cluster_results.silhouette_score) }}</h4>
+                                                <small class="text-muted">Score Silhouette</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="card text-center">
+                                            <div class="card-body">
+                                                <h4 class="text-info">{{ "%.0f"|format(cluster_results.inertia) }}</h4>
+                                                <small class="text-muted">Inertie</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <h6>Taille des Clusters</h6>
+                                <div class="row">
+                                    {% for cluster_name, size in cluster_results.cluster_sizes.items() %}
+                                    <div class="col-md-3 mb-2">
+                                        <div class="d-flex justify-content-between align-items-center p-2 border rounded">
+                                            <span>{{ cluster_name.title() }}</span>
+                                            <span class="badge bg-secondary">{{ size }} éléments</span>
+                                        </div>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                            {% endif %}
+                            
+                            <!-- Données brutes -->
+                            <div class="tab-pane fade" id="raw" role="tabpanel">
+                                <div class="mb-3">
+                                    <button class="btn btn-sm btn-outline-secondary" onclick="copyToClipboard(JSON.stringify({{ results | tojson }}, null, 2))">
+                                        <i class="fas fa-copy me-1"></i>Copier JSON
+                                    </button>
+                                </div>
+                                <pre class="bg-light p-3 rounded" style="max-height: 400px; overflow-y: auto;"><code>{{ results | tojson(indent=2) }}</code></pre>
+                            </div>
+                        </div>
+                    {% else %}
+                        <div class="text-center py-5">
+                            <i class="fas fa-exclamation-triangle text-warning fa-3x mb-3"></i>
+                            <h5>Aucun résultat disponible</h5>
+                            <p class="text-muted">Les résultats de l'analyse n'ont pas pu être chargés.</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Actions recommandées -->
+<div class="row">
+    <div class="col-12">
+        <div class="card border-success">
+            <div class="card-header bg-success text-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-arrow-right me-2"></i>Actions Recommandées
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="d-grid">
+                            <button class="btn btn-outline-primary" onclick="createNewAnalysis()">
+                                <i class="fas fa-plus me-2"></i>
+                                Nouvelle Analyse
+                            </button>
+                        </div>
+                        <small class="text-muted text-center d-block mt-1">
+                            Explorez d'autres aspects de vos données
+                        </small>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="d-grid">
+                            <button class="btn btn-outline-info" onclick="improveDataset()">
+                                <i class="fas fa-magic me-2"></i>
+                                Améliorer Dataset
+                            </button>
+                        </div>
+                        <small class="text-muted text-center d-block mt-1">
+                            Appliquez les recommandations
+                        </small>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="d-grid">
+                            <button class="btn btn-outline-success" onclick="createReport()">
+                                <i class="fas fa-file-pdf me-2"></i>
+                                Rapport Complet
+                            </button>
+                        </div>
+                        <small class="text-muted text-center d-block mt-1">
+                            Générez un rapport détaillé
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de partage -->
+<div class="modal fade" id="shareModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Partager l'Analyse</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label">Lien de partage</label>
+                    <div class="input-group">
+                        <input type="text" class="form-control" id="shareUrl" value="{{ request.url }}" readonly>
+                        <button class="btn btn-outline-secondary" onclick="copyShareUrl()">
+                            <i class="fas fa-copy"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Email</label>
+                    <input type="email" class="form-control" id="shareEmail" placeholder="Destinataire">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Message (optionnel)</label>
+                    <textarea class="form-control" id="shareMessage" rows="3" placeholder="Ajoutez un message personnalisé..."></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                <button type="button" class="btn btn-primary" onclick="sendShare()">
+                    <i class="fas fa-paper-plane me-2"></i>Envoyer
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Variables globales
+const analysisId = {{ analysis.id }};
+const visualizations = {{ analysis.get_visualizations() | tojson }};
+
+// Fonctions utilitaires
+function getCorrelationColor(value) {
+    const abs = Math.abs(value);
+    if (abs > 0.8) return '#dc3545'; // Rouge pour forte corrélation
+    if (abs > 0.5) return '#ffc107'; // Jaune pour corrélation modérée
+    if (abs > 0.3) return '#17a2b8'; // Bleu pour corrélation faible
+    return '#6c757d'; // Gris pour corrélation très faible
+}
+
+// Fonctions d'actions
+function exportAnalysis() {
+    const btn = event.target;
+    const originalContent = btn.innerHTML;
+    btn.innerHTML = '<span class="loading-spinner me-1"></span>Export...';
+    btn.disabled = true;
+    
+    // Simulation d'export
+    setTimeout(() => {
+        // Ici, vous feriez un appel vers l'API d'export
+        fetch(`/api/v1/analyses/${analysisId}/export`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector('meta[name=csrf-token]').getAttribute('content')
+            },
+            body: JSON.stringify({ format: 'pdf' })
+        })
+        .then(response => response.blob())
+        .then(blob => {
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `analyse_${analysisId}_${Date.now()}.pdf`;
+            a.click();
+            window.URL.revokeObjectURL(url);
+        })
+        .catch(error => {
+            console.error('Erreur export:', error);
+            alert('Erreur lors de l\'export');
+        })
+        .finally(() => {
+            btn.innerHTML = originalContent;
+            btn.disabled = false;
+        });
+    }, 1000);
+}
+
+function shareAnalysis() {
+    const modal = new bootstrap.Modal(document.getElementById('shareModal'));
+    modal.show();
+}
+
+function copyShareUrl() {
+    const input = document.getElementById('shareUrl');
+    input.select();
+    navigator.clipboard.writeText(input.value).then(() => {
+        const btn = event.target.closest('button');
+        const originalContent = btn.innerHTML;
+        btn.innerHTML = '<i class="fas fa-check"></i>';
+        btn.classList.replace('btn-outline-secondary', 'btn-success');
+        
+        setTimeout(() => {
+            btn.innerHTML = originalContent;
+            btn.classList.replace('btn-success', 'btn-outline-secondary');
+        }, 2000);
+    });
+}
+
+function sendShare() {
+    const email = document.getElementById('shareEmail').value;
+    const message = document.getElementById('shareMessage').value;
+    
+    if (!email) {
+        alert('Veuillez saisir une adresse email');
+        return;
+    }
+    
+    const btn = event.target;
+    const originalContent = btn.innerHTML;
+    btn.innerHTML = '<span class="loading-spinner me-2"></span>Envoi...';
+    btn.disabled = true;
+    
+    // Simulation d'envoi
+    setTimeout(() => {
+        btn.innerHTML = '<i class="fas fa-check me-2"></i>Envoyé !';
+        btn.classList.replace('btn-primary', 'btn-success');
+        
+        setTimeout(() => {
+            const modal = bootstrap.Modal.getInstance(document.getElementById('shareModal'));
+            modal.hide();
+            
+            // Reset
+            btn.innerHTML = originalContent;
+            btn.classList.replace('btn-success', 'btn-primary');
+            btn.disabled = false;
+            document.getElementById('shareEmail').value = '';
+            document.getElementById('shareMessage').value = '';
+        }, 2000);
+    }, 1500);
+}
+
+function duplicateAnalysis() {
+    if (confirm('Créer une copie de cette analyse ?')) {
+        window.location.href = `{{ url_for('main.analyze_dataset', dataset_id=analysis.dataset.id) }}?duplicate=${analysisId}`;
+    }
+}
+
+function deleteAnalysis() {
+    if (confirm('Êtes-vous sûr de vouloir supprimer cette analyse ? Cette action est irréversible.')) {
+        fetch(`/api/v1/analyses/${analysisId}`, {
+            method: 'DELETE',
+            headers: {
+                'X-CSRFToken': document.querySelector('meta[name=csrf-token]').getAttribute('content')
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                window.location.href = '{{ url_for("main.view_dataset", dataset_id=analysis.dataset.id) }}';
+            } else {
+                alert('Erreur: ' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Erreur:', error);
+            alert('Erreur lors de la suppression');
+        });
+    }
+}
+
+function toggleDetails() {
+    const section = document.getElementById('detailsSection');
+    const icon = document.getElementById('detailsToggleIcon');
+    
+    if (section.classList.contains('show')) {
+        section.classList.remove('show');
+        icon.classList.replace('fa-chevron-up', 'fa-chevron-down');
+    } else {
+        section.classList.add('show');
+        icon.classList.replace('fa-chevron-down', 'fa-chevron-up');
+    }
+}
+
+function fullscreenViz(vizName) {
+    // Implémentation pour affichage plein écran des visualisations
+    alert('Fonctionnalité plein écran à implémenter pour: ' + vizName);
+}
+
+function downloadViz(vizName) {
+    // Implémentation pour téléchargement des visualisations
+    alert('Téléchargement de la visualisation: ' + vizName);
+}
+
+function applyRecommendation(type) {
+    alert(`Application de la recommandation de type: ${type}`);
+}
+
+function createNewAnalysis() {
+    window.location.href = '{{ url_for("main.analyze_dataset", dataset_id=analysis.dataset.id) }}';
+}
+
+function improveDataset() {
+    window.location.href = '{{ url_for("main.clean_dataset", dataset_id=analysis.dataset.id) }}';
+}
+
+function createReport() {
+    const btn = event.target;
+    const originalContent = btn.innerHTML;
+    btn.innerHTML = '<span class="loading-spinner me-2"></span>Génération...';
+    btn.disabled = true;
+    
+    setTimeout(() => {
+        btn.innerHTML = '<i class="fas fa-check me-2"></i>Rapport généré';
+        btn.classList.replace('btn-outline-success', 'btn-success');
+        
+        setTimeout(() => {
+            btn.innerHTML = originalContent;
+            btn.classList.replace('btn-success', 'btn-outline-success');
+            btn.disabled = false;
+        }, 3000);
+    }, 2000);
+}
+
+function copyToClipboard(text) {
+    navigator.clipboard.writeText(text).then(() => {
+        const btn = event.target;
+        const originalContent = btn.innerHTML;
+        btn.innerHTML = '<i class="fas fa-check me-1"></i>Copié';
+        btn.classList.replace('btn-outline-secondary', 'btn-success');
+        
+        setTimeout(() => {
+            btn.innerHTML = originalContent;
+            btn.classList.replace('btn-success', 'btn-outline-secondary');
+        }, 2000);
+    });
+}
+
+// Initialisation
+document.addEventListener('DOMContentLoaded', function() {
+    // Rendu des visualisations Plotly
+    Object.keys(visualizations).forEach(vizName => {
+        const viz = visualizations[vizName];
+        if (viz.type === 'plotly') {
+            const element = document.getElementById(`plotly-${vizName}`);
+            if (element && viz.data) {
+                try {
+                    Plotly.newPlot(element, viz.data.data, viz.data.layout, {responsive: true});
+                } catch (error) {
+                    console.error(`Erreur rendu Plotly ${vizName}:`, error);
+                    element.innerHTML = '<div class="text-center py-3"><i class="fas fa-exclamation-triangle text-warning"></i><br>Erreur de rendu</div>';
+                }
+            }
+        }
+    });
+    
+    // Animation des cartes
+    const cards = document.querySelectorAll('.card');
+    cards.forEach((card, index) => {
+        card.style.opacity = '0';
+        card.style.transform = 'translateY(20px)';
+        
+        setTimeout(() => {
+            card.style.transition = 'all 0.5s ease';
+            card.style.opacity = '1';
+            card.style.transform = 'translateY(0)';
+        }, index * 100);
+    });
+});
+</script>
+
+<style>
+.insight-card {
+    transition: all 0.3s ease;
+}
+
+.insight-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+}
+
+.badge-correlation {
+    font-size: 0.7rem;
+    color: white !important;
+}
+
+.viz-container {
+    transition: all 0.3s ease;
+}
+
+.viz-container:hover {
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+}
+
+.tab-content {
+    min-height: 300px;
+}
+
+.bg-gradient-info {
+    background: linear-gradient(135deg, #17a2b8, #138496) !important;
+}
+
+@media (max-width: 768px) {
+    .display-6 {
+        font-size: 2rem;
+    }
+    
+    .table-responsive {
+        font-size: 0.8rem;
+    }
+    
+    .badge-correlation {
+        font-size: 0.6rem;
+    }
+}
+</style>
+{% endblock %}

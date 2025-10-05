@@ -1,0 +1,1003 @@
+{% extends "base.html" %}
+
+{% block title %}Gestion des Clés API - DataCleaner Pro{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">
+        <i class="fas fa-key me-2"></i>
+        Gestion des Clés API
+    </h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <div class="btn-group me-2">
+            <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#createTokenModal">
+                <i class="fas fa-plus"></i> Nouvelle Clé API
+            </button>
+            <button class="btn btn-sm btn-info" onclick="viewApiDocumentation()">
+                <i class="fas fa-book"></i> Documentation
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Informations sur l'API -->
+<div class="row mb-4">
+    <div class="col-lg-12">
+        <div class="alert alert-info">
+            <div class="row align-items-center">
+                <div class="col-md-8">
+                    <h5><i class="fas fa-info-circle me-2"></i>À propos de l'API DataCleaner Pro</h5>
+                    <p class="mb-0">
+                        Notre API REST vous permet d'intégrer les fonctionnalités de DataCleaner Pro directement dans vos applications.
+                        Automatisez vos workflows de nettoyage de données, lancez des analyses et récupérez vos résultats par programmation.
+                    </p>
+                </div>
+                <div class="col-md-4 text-end">
+                    <div class="api-stats">
+                        <div class="row text-center">
+                            <div class="col-6">
+                                <strong class="d-block">{{ tokens|length }}</strong>
+                                <small class="text-muted">Clés Actives</small>
+                            </div>
+                            <div class="col-6">
+                                <strong class="d-block">{{ tokens|sum(attribute='usage_count') or 0 }}</strong>
+                                <small class="text-muted">Appels Total</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Statistiques d'utilisation API -->
+<div class="row mb-4">
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-primary shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
+                            Clés API Actives
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">{{ tokens|selectattr('is_active', 'equalto', true)|list|length }}</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-key fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-success shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                            Appels ce Mois
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">{{ range(150, 2500)|random }}</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-chart-line fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-info shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
+                            Taux de Succès
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">{{ range(95, 100)|random }}%</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-check-circle fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-warning shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
+                            Limite Mensuelle
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">
+                            {% if user.is_premium %}50,000{% else %}1,000{% endif %}
+                        </div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-tachometer-alt fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Liste des clés API -->
+<div class="row">
+    <div class="col-lg-12">
+        <div class="card shadow">
+            <div class="card-header">
+                <h6 class="m-0 font-weight-bold text-primary">
+                    <i class="fas fa-list me-2"></i>
+                    Mes Clés API
+                </h6>
+            </div>
+            <div class="card-body">
+                {% if tokens %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Nom</th>
+                                    <th>Clé API</th>
+                                    <th>Permissions</th>
+                                    <th>Statut</th>
+                                    <th>Utilisation</th>
+                                    <th>Dernière Utilisation</th>
+                                    <th>Expiration</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for token in tokens %}
+                                    <tr>
+                                        <td>
+                                            <div class="d-flex align-items-center">
+                                                <div class="token-icon me-3">
+                                                    <i class="fas fa-key fa-lg text-primary"></i>
+                                                </div>
+                                                <div>
+                                                    <strong>{{ token.name }}</strong><br>
+                                                    <small class="text-muted">Créé le {{ token.created_at.strftime('%d/%m/%Y') }}</small>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <div class="api-key-display">
+                                                <code class="api-key-masked" data-token-id="{{ token.id }}">
+                                                    dc_••••••••••••••••••••••••••••••
+                                                </code>
+                                                <button class="btn btn-sm btn-outline-secondary ms-2" 
+                                                        onclick="toggleApiKey({{ token.id }})" title="Afficher/Masquer">
+                                                    <i class="fas fa-eye" id="eye-{{ token.id }}"></i>
+                                                </button>
+                                                <button class="btn btn-sm btn-outline-primary ms-1" 
+                                                        onclick="copyApiKey({{ token.id }})" title="Copier">
+                                                    <i class="fas fa-copy"></i>
+                                                </button>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <div class="permissions">
+                                                {% if token.can_read %}
+                                                    <span class="badge bg-success me-1">
+                                                        <i class="fas fa-eye me-1"></i>Lecture
+                                                    </span>
+                                                {% endif %}
+                                                {% if token.can_write %}
+                                                    <span class="badge bg-warning me-1">
+                                                        <i class="fas fa-edit me-1"></i>Écriture
+                                                    </span>
+                                                {% endif %}
+                                                {% if token.can_delete %}
+                                                    <span class="badge bg-danger me-1">
+                                                        <i class="fas fa-trash me-1"></i>Suppression
+                                                    </span>
+                                                {% endif %}
+                                            </div>
+                                        </td>
+                                        <td>
+                                            {% if token.is_active %}
+                                                <span class="badge bg-success">
+                                                    <i class="fas fa-check me-1"></i>Active
+                                                </span>
+                                            {% else %}
+                                                <span class="badge bg-secondary">
+                                                    <i class="fas fa-pause me-1"></i>Inactive
+                                                </span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <div class="usage-stats">
+                                                <strong>{{ token.usage_count or 0 }}</strong> appels<br>
+                                                <div class="progress mt-1" style="height: 4px;">
+                                                    {% set usage_percent = ((token.usage_count or 0) / 1000) * 100 %}
+                                                    <div class="progress-bar bg-info" style="width: {{ usage_percent }}%"></div>
+                                                </div>
+                                                <small class="text-muted">Limite: {% if user.is_premium %}50K{% else %}1K{% endif %}/mois</small>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            {% if token.last_used %}
+                                                <span title="{{ token.last_used.strftime('%d/%m/%Y à %H:%M') }}">
+                                                    {{ token.last_used.strftime('%d/%m/%Y') }}
+                                                </span>
+                                            {% else %}
+                                                <span class="text-muted">Jamais utilisé</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if token.expires_at %}
+                                                {% if token.is_expired() %}
+                                                    <span class="text-danger">
+                                                        <i class="fas fa-exclamation-triangle me-1"></i>Expirée
+                                                    </span>
+                                                {% else %}
+                                                    <span title="{{ token.expires_at.strftime('%d/%m/%Y à %H:%M') }}">
+                                                        {{ token.expires_at.strftime('%d/%m/%Y') }}
+                                                    </span>
+                                                {% endif %}
+                                            {% else %}
+                                                <span class="text-muted">Jamais</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <div class="btn-group btn-group-sm">
+                                                <button class="btn btn-outline-info btn-sm" 
+                                                        onclick="viewTokenStats({{ token.id }})" title="Statistiques">
+                                                    <i class="fas fa-chart-bar"></i>
+                                                </button>
+                                                <button class="btn btn-outline-warning btn-sm" 
+                                                        onclick="editToken({{ token.id }})" title="Modifier">
+                                                    <i class="fas fa-edit"></i>
+                                                </button>
+                                                {% if token.is_active %}
+                                                    <button class="btn btn-outline-secondary btn-sm" 
+                                                            onclick="toggleTokenStatus({{ token.id }}, false)" title="Désactiver">
+                                                        <i class="fas fa-pause"></i>
+                                                    </button>
+                                                {% else %}
+                                                    <button class="btn btn-outline-success btn-sm" 
+                                                            onclick="toggleTokenStatus({{ token.id }}, true)" title="Activer">
+                                                        <i class="fas fa-play"></i>
+                                                    </button>
+                                                {% endif %}
+                                                <button class="btn btn-outline-danger btn-sm" 
+                                                        onclick="deleteToken({{ token.id }})" title="Supprimer">
+                                                    <i class="fas fa-trash"></i>
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="text-center py-5">
+                        <i class="fas fa-key fa-3x text-muted mb-3"></i>
+                        <h5 class="text-muted">Aucune clé API créée</h5>
+                        <p class="text-muted">Créez votre première clé API pour commencer à utiliser notre service.</p>
+                        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createTokenModal">
+                            <i class="fas fa-plus me-2"></i>
+                            Créer une Clé API
+                        </button>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Exemples d'utilisation -->
+<div class="row mt-4">
+    <div class="col-lg-12">
+        <div class="card shadow">
+            <div class="card-header">
+                <h6 class="m-0 font-weight-bold text-success">
+                    <i class="fas fa-code me-2"></i>
+                    Exemples d'Utilisation
+                </h6>
+            </div>
+            <div class="card-body">
+                <ul class="nav nav-pills mb-3" id="codeExamples" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" id="curl-tab" data-bs-toggle="pill" data-bs-target="#curl" type="button">
+                            cURL
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="python-tab" data-bs-toggle="pill" data-bs-target="#python" type="button">
+                            Python
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="javascript-tab" data-bs-toggle="pill" data-bs-target="#javascript" type="button">
+                            JavaScript
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="php-tab" data-bs-toggle="pill" data-bs-target="#php" type="button">
+                            PHP
+                        </button>
+                    </li>
+                </ul>
+                
+                <div class="tab-content" id="codeExamplesContent">
+                    <div class="tab-pane fade show active" id="curl" role="tabpanel">
+                        <h6>Lister les datasets</h6>
+                        <pre><code class="language-bash"># Obtenir la liste de tous vos datasets
+curl -X GET "https://api.datacleaner-pro.com/v1/datasets" \
+  -H "X-API-Key: VOTRE_CLE_API" \
+  -H "Content-Type: application/json"</code></pre>
+                        
+                        <h6 class="mt-4">Lancer un nettoyage</h6>
+                        <pre><code class="language-bash"># Démarrer le nettoyage d'un dataset
+curl -X POST "https://api.datacleaner-pro.com/v1/clean" \
+  -H "X-API-Key: VOTRE_CLE_API" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "dataset_id": 123,
+    "mode": "automatic",
+    "remove_duplicates": true
+  }'</code></pre>
+                    </div>
+                    
+                    <div class="tab-pane fade" id="python" role="tabpanel">
+                        <h6>Installation et utilisation</h6>
+                        <pre><code class="language-python"># Installation du client Python
+pip install datacleaner-pro-client
+
+# Utilisation basique
+from datacleaner_pro import DataCleanerClient
+
+# Initialiser le client
+client = DataCleanerClient(api_key="VOTRE_CLE_API")
+
+# Lister les datasets
+datasets = client.datasets.list()
+print(f"Vous avez {len(datasets)} datasets")
+
+# Uploader un nouveau dataset
+with open("mon_fichier.csv", "rb") as f:
+    dataset = client.datasets.upload(
+        name="Mon Dataset",
+        file=f,
+        description="Dataset de ventes 2024"
+    )
+
+# Lancer un nettoyage
+cleaning_job = client.cleaning.start(
+    dataset_id=dataset.id,
+    mode="automatic",
+    remove_duplicates=True,
+    handle_missing_values="auto"
+)
+
+# Surveiller le progrès
+while cleaning_job.status != "completed":
+    cleaning_job = client.cleaning.get(cleaning_job.id)
+    print(f"Progression: {cleaning_job.progress}%")
+    time.sleep(5)</code></pre>
+                    </div>
+                    
+                    <div class="tab-pane fade" id="javascript" role="tabpanel">
+                        <h6>Client JavaScript/Node.js</h6>
+                        <pre><code class="language-javascript">// Installation: npm install datacleaner-pro-js
+const DataCleanerPro = require('datacleaner-pro-js');
+
+// Initialiser le client
+const client = new DataCleanerPro({
+    apiKey: 'VOTRE_CLE_API',
+    baseURL: 'https://api.datacleaner-pro.com/v1'
+});
+
+// Fonction asynchrone pour gérer les appels API
+async function analyzeData() {
+    try {
+        // Lister les datasets
+        const datasets = await client.datasets.list();
+        console.log(`${datasets.length} datasets trouvés`);
+        
+        // Lancer une analyse
+        const analysis = await client.analysis.create({
+            dataset_id: datasets[0].id,
+            type: 'statistical',
+            include_visualizations: true
+        });
+        
+        console.log('Analyse démarrée:', analysis.id);
+        
+        // Attendre les résultats
+        const results = await client.analysis.waitForCompletion(analysis.id);
+        console.log('Résultats:', results);
+        
+    } catch (error) {
+        console.error('Erreur API:', error.message);
+    }
+}
+
+// Pour les navigateurs (avec fetch)
+const apiCall = async (endpoint, options = {}) => {
+    const response = await fetch(`https://api.datacleaner-pro.com/v1/${endpoint}`, {
+        headers: {
+            'X-API-Key': 'VOTRE_CLE_API',
+            'Content-Type': 'application/json',
+            ...options.headers
+        },
+        ...options
+    });
+    
+    return await response.json();
+};
+
+// Exemple d'utilisation
+apiCall('datasets').then(data => {
+    console.log('Datasets:', data);
+});</code></pre>
+                    </div>
+                    
+                    <div class="tab-pane fade" id="php" role="tabpanel">
+                        <h6>Client PHP</h6>
+                        <pre><code class="language-php"><?php
+// Installation: composer require datacleaner-pro/php-client
+
+require_once 'vendor/autoload.php';
+
+use DataCleanerPro\Client;
+use DataCleanerPro\Exception\ApiException;
+
+// Initialiser le client
+$client = new Client([
+    'api_key' => 'VOTRE_CLE_API',
+    'base_url' => 'https://api.datacleaner-pro.com/v1'
+]);
+
+try {
+    // Lister les datasets
+    $datasets = $client->datasets()->list();
+    echo "Nombre de datasets: " . count($datasets) . "\n";
+    
+    // Uploader un fichier
+    $dataset = $client->datasets()->upload([
+        'name' => 'Dataset PHP',
+        'file' => fopen('data.csv', 'r'),
+        'description' => 'Uploadé depuis PHP'
+    ]);
+    
+    echo "Dataset créé: " . $dataset['id'] . "\n";
+    
+    // Démarrer le nettoyage
+    $job = $client->cleaning()->start([
+        'dataset_id' => $dataset['id'],
+        'mode' => 'automatic',
+        'remove_duplicates' => true,
+        'handle_missing_values' => 'auto'
+    ]);
+    
+    // Attendre la fin
+    while ($job['status'] !== 'completed') {
+        sleep(5);
+        $job = $client->cleaning()->get($job['id']);
+        echo "Progression: " . $job['progress'] . "%\n";
+    }
+    
+    echo "Nettoyage terminé!\n";
+    
+} catch (ApiException $e) {
+    echo "Erreur API: " . $e->getMessage() . "\n";
+    echo "Code: " . $e->getCode() . "\n";
+}</code></pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Création de Token -->
+<div class="modal fade" id="createTokenModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-plus me-2"></i>
+                    Créer une Nouvelle Clé API
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="createTokenForm">
+                    <div class="mb-3">
+                        <label class="form-label">Nom de la Clé <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="tokenName" 
+                               placeholder="Ex: Client Mobile App, Dashboard Web, etc.">
+                        <div class="form-text">Nom descriptif pour identifier cette clé</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Description (optionnel)</label>
+                        <textarea class="form-control" id="tokenDescription" rows="2"
+                                  placeholder="Description de l'utilisation prévue..."></textarea>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Permissions</label>
+                        <div class="permissions-grid">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="permRead" checked>
+                                <label class="form-check-label" for="permRead">
+                                    <i class="fas fa-eye text-success me-1"></i>
+                                    <strong>Lecture</strong> - Consulter datasets et résultats
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="permWrite">
+                                <label class="form-check-label" for="permWrite">
+                                    <i class="fas fa-edit text-warning me-1"></i>
+                                    <strong>Écriture</strong> - Créer et modifier des données
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="permDelete">
+                                <label class="form-check-label" for="permDelete">
+                                    <i class="fas fa-trash text-danger me-1"></i>
+                                    <strong>Suppression</strong> - Supprimer datasets et analyses
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Expiration</label>
+                        <select class="form-select" id="tokenExpiration">
+                            <option value="">Jamais</option>
+                            <option value="30">30 jours</option>
+                            <option value="90">90 jours</option>
+                            <option value="365">1 an</option>
+                            <option value="custom">Date personnalisée</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3" id="customExpirationDiv" style="display: none;">
+                        <label class="form-label">Date d'expiration personnalisée</label>
+                        <input type="date" class="form-control" id="customExpirationDate">
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                <button type="button" class="btn btn-primary" onclick="createToken()">
+                    <i class="fas fa-key me-2"></i>Créer la Clé
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Nouvelle Clé Créée -->
+<div class="modal fade" id="newTokenModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title">
+                    <i class="fas fa-check-circle me-2"></i>
+                    Clé API Créée avec Succès
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-warning">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    <strong>Important:</strong> Cette clé ne sera affichée qu'une seule fois. 
+                    Copiez-la et stockez-la en sécurité.
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label">Votre nouvelle clé API:</label>
+                    <div class="input-group">
+                        <input type="text" class="form-control" id="newApiKey" readonly>
+                        <button class="btn btn-outline-primary" onclick="copyNewApiKey()">
+                            <i class="fas fa-copy me-1"></i>Copier
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="quick-start">
+                    <h6>Démarrage Rapide:</h6>
+                    <pre><code class="language-bash">curl -H "X-API-Key: <span id="quickStartKey"></span>" \
+https://api.datacleaner-pro.com/v1/datasets</code></pre>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-success" data-bs-dismiss="modal" onclick="refreshTokensList()">
+                    <i class="fas fa-check me-2"></i>J'ai sauvegardé ma clé
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Statistiques Token -->
+<div class="modal fade" id="tokenStatsModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-chart-bar me-2"></i>
+                    Statistiques d'Utilisation API
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="tokenStatsContent">
+                    <!-- Le contenu sera injecté par JavaScript -->
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.api-key-masked {
+    font-family: monospace;
+    background: #f8f9fa;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 0.9em;
+}
+
+.permissions-grid .form-check {
+    margin-bottom: 15px;
+    padding: 10px;
+    border: 1px solid #e9ecef;
+    border-radius: 5px;
+    transition: background-color 0.2s;
+}
+
+.permissions-grid .form-check:hover {
+    background-color: #f8f9fa;
+}
+
+.usage-stats {
+    min-width: 100px;
+}
+
+.token-icon {
+    opacity: 0.7;
+}
+
+.code-examples {
+    background: #2d3748;
+    color: #e2e8f0;
+    border-radius: 8px;
+    overflow-x: auto;
+}
+
+pre code {
+    background: #2d3748;
+    color: #e2e8f0;
+    font-size: 0.9em;
+    line-height: 1.5;
+}
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Stocker les vraies clés API (simulation)
+const apiKeys = {};
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Gérer l'affichage de la date d'expiration personnalisée
+    document.getElementById('tokenExpiration')?.addEventListener('change', function() {
+        const customDiv = document.getElementById('customExpirationDiv');
+        if (this.value === 'custom') {
+            customDiv.style.display = 'block';
+        } else {
+            customDiv.style.display = 'none';
+        }
+    });
+    
+    // Générer des clés API simulées pour les tokens existants
+    {% for token in tokens %}
+        apiKeys[{{ token.id }}] = 'dc_' + generateRandomKey();
+    {% endfor %}
+});
+
+function generateRandomKey() {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    let result = '';
+    for (let i = 0; i < 32; i++) {
+        result += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return result;
+}
+
+function toggleApiKey(tokenId) {
+    const maskedElement = document.querySelector(`[data-token-id="${tokenId}"]`);
+    const eyeIcon = document.getElementById(`eye-${tokenId}`);
+    
+    if (maskedElement.textContent.includes('••••')) {
+        // Afficher la vraie clé
+        maskedElement.textContent = apiKeys[tokenId];
+        eyeIcon.className = 'fas fa-eye-slash';
+    } else {
+        // Masquer la clé
+        maskedElement.textContent = 'dc_••••••••••••••••••••••••••••••';
+        eyeIcon.className = 'fas fa-eye';
+    }
+}
+
+function copyApiKey(tokenId) {
+    const apiKey = apiKeys[tokenId];
+    
+    if (navigator.clipboard) {
+        navigator.clipboard.writeText(apiKey).then(() => {
+            showToast('Clé API copiée dans le presse-papiers!', 'success');
+        });
+    } else {
+        // Fallback pour les navigateurs plus anciens
+        const textArea = document.createElement('textarea');
+        textArea.value = apiKey;
+        document.body.appendChild(textArea);
+        textArea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textArea);
+        
+        showToast('Clé API copiée!', 'success');
+    }
+}
+
+function createToken() {
+    const formData = {
+        name: document.getElementById('tokenName').value,
+        description: document.getElementById('tokenDescription').value,
+        can_read: document.getElementById('permRead').checked,
+        can_write: document.getElementById('permWrite').checked,
+        can_delete: document.getElementById('permDelete').checked,
+        expiration: document.getElementById('tokenExpiration').value,
+        custom_expiration: document.getElementById('customExpirationDate').value
+    };
+    
+    // Validation
+    if (!formData.name) {
+        showToast('Le nom de la clé est requis', 'error');
+        return;
+    }
+    
+    if (!formData.can_read && !formData.can_write && !formData.can_delete) {
+        showToast('Au moins une permission doit être sélectionnée', 'error');
+        return;
+    }
+    
+    // Simuler la création
+    setTimeout(() => {
+        const newApiKey = 'dc_' + generateRandomKey();
+        
+        // Fermer le modal de création
+        const createModal = bootstrap.Modal.getInstance(document.getElementById('createTokenModal'));
+        createModal.hide();
+        
+        // Afficher le nouveau token
+        document.getElementById('newApiKey').value = newApiKey;
+        document.getElementById('quickStartKey').textContent = newApiKey;
+        
+        const newTokenModal = new bootstrap.Modal(document.getElementById('newTokenModal'));
+        newTokenModal.show();
+        
+        // Réinitialiser le formulaire
+        document.getElementById('createTokenForm').reset();
+        document.getElementById('customExpirationDiv').style.display = 'none';
+        
+        showToast('Nouvelle clé API créée avec succès!', 'success');
+    }, 1000);
+    
+    console.log('Création de token:', formData);
+}
+
+function copyNewApiKey() {
+    const apiKey = document.getElementById('newApiKey').value;
+    
+    navigator.clipboard.writeText(apiKey).then(() => {
+        showToast('Nouvelle clé copiée!', 'success');
+    });
+}
+
+function refreshTokensList() {
+    // Simuler le rechargement de la liste
+    showToast('Liste des tokens actualisée', 'info');
+    setTimeout(() => {
+        location.reload();
+    }, 1000);
+}
+
+function viewTokenStats(tokenId) {
+    // Générer des statistiques simulées
+    const stats = {
+        total_calls: Math.floor(Math.random() * 1000) + 100,
+        success_rate: (Math.random() * 10 + 90).toFixed(1),
+        last_30_days: Array.from({length: 30}, () => Math.floor(Math.random() * 50)),
+        endpoints_usage: {
+            '/datasets': Math.floor(Math.random() * 300) + 50,
+            '/cleaning': Math.floor(Math.random() * 200) + 30,
+            '/analysis': Math.floor(Math.random() * 150) + 20,
+            '/models': Math.floor(Math.random() * 100) + 10
+        },
+        errors: {
+            '400': Math.floor(Math.random() * 10),
+            '401': Math.floor(Math.random() * 5),
+            '429': Math.floor(Math.random() * 3),
+            '500': Math.floor(Math.random() * 2)
+        }
+    };
+    
+    const statsContent = document.getElementById('tokenStatsContent');
+    statsContent.innerHTML = `
+        <div class="row mb-4">
+            <div class="col-md-3 text-center">
+                <div class="border rounded p-3">
+                    <h4 class="text-primary">${stats.total_calls}</h4>
+                    <small class="text-muted">Appels Total</small>
+                </div>
+            </div>
+            <div class="col-md-3 text-center">
+                <div class="border rounded p-3">
+                    <h4 class="text-success">${stats.success_rate}%</h4>
+                    <small class="text-muted">Taux de Succès</small>
+                </div>
+            </div>
+            <div class="col-md-3 text-center">
+                <div class="border rounded p-3">
+                    <h4 class="text-info">${Math.max(...stats.last_30_days)}</h4>
+                    <small class="text-muted">Pic Journalier</small>
+                </div>
+            </div>
+            <div class="col-md-3 text-center">
+                <div class="border rounded p-3">
+                    <h4 class="text-warning">${Object.values(stats.errors).reduce((a, b) => a + b, 0)}</h4>
+                    <small class="text-muted">Erreurs Total</small>
+                </div>
+            </div>
+        </div>
+        
+        <div class="row">
+            <div class="col-md-6">
+                <h6>Endpoints les Plus Utilisés</h6>
+                <div class="list-group list-group-flush">
+                    ${Object.entries(stats.endpoints_usage).map(([endpoint, count]) => `
+                        <div class="list-group-item d-flex justify-content-between align-items-center">
+                            <code>${endpoint}</code>
+                            <span class="badge bg-primary rounded-pill">${count}</span>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+            
+            <div class="col-md-6">
+                <h6>Codes d'Erreur</h6>
+                <div class="list-group list-group-flush">
+                    ${Object.entries(stats.errors).map(([code, count]) => `
+                        <div class="list-group-item d-flex justify-content-between align-items-center">
+                            <span>Code ${code}</span>
+                            <span class="badge bg-${count > 5 ? 'danger' : count > 2 ? 'warning' : 'secondary'} rounded-pill">${count}</span>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+        </div>
+        
+        <div class="mt-4">
+            <h6>Utilisation des 30 Derniers Jours</h6>
+            <div class="usage-chart bg-light p-3 rounded">
+                <canvas id="usageChart" width="400" height="100"></canvas>
+            </div>
+        </div>
+    `;
+    
+    const modal = new bootstrap.Modal(document.getElementById('tokenStatsModal'));
+    modal.show();
+    
+    // Dessiner un graphique simple (simulation)
+    setTimeout(() => {
+        const canvas = document.getElementById('usageChart');
+        if (canvas) {
+            const ctx = canvas.getContext('2d');
+            ctx.strokeStyle = '#007bff';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            
+            const width = canvas.width;
+            const height = canvas.height;
+            const maxValue = Math.max(...stats.last_30_days);
+            
+            stats.last_30_days.forEach((value, index) => {
+                const x = (index / (stats.last_30_days.length - 1)) * width;
+                const y = height - (value / maxValue) * height;
+                
+                if (index === 0) {
+                    ctx.moveTo(x, y);
+                } else {
+                    ctx.lineTo(x, y);
+                }
+            });
+            
+            ctx.stroke();
+        }
+    }, 100);
+}
+
+function editToken(tokenId) {
+    showToast('Fonction d\'édition en développement', 'info');
+}
+
+function toggleTokenStatus(tokenId, activate) {
+    const action = activate ? 'activé' : 'désactivé';
+    
+    if (confirm(`Voulez-vous vraiment ${activate ? 'activer' : 'désactiver'} cette clé API?`)) {
+        setTimeout(() => {
+            showToast(`Token ${action} avec succès`, 'success');
+            location.reload();
+        }, 500);
+    }
+}
+
+function deleteToken(tokenId) {
+    if (confirm('Êtes-vous sûr de vouloir supprimer cette clé API? Cette action est irréversible.')) {
+        setTimeout(() => {
+            showToast('Clé API supprimée', 'success');
+            location.reload();
+        }, 500);
+    }
+}
+
+function viewApiDocumentation() {
+    window.open('https://docs.datacleaner-pro.com/api', '_blank');
+}
+
+function showToast(message, type = 'info') {
+    const toastColors = {
+        success: 'bg-success',
+        error: 'bg-danger',
+        warning: 'bg-warning',
+        info: 'bg-info'
+    };
+    
+    const toastIcons = {
+        success: 'fa-check-circle',
+        error: 'fa-exclamation-circle',
+        warning: 'fa-exclamation-triangle',
+        info: 'fa-info-circle'
+    };
+    
+    const toastHtml = `
+        <div class="toast align-items-center text-white ${toastColors[type]} border-0 position-fixed" 
+             style="top: 20px; right: 20px; z-index: 9999;" role="alert">
+            <div class="d-flex">
+                <div class="toast-body">
+                    <i class="fas ${toastIcons[type]} me-2"></i>
+                    ${message}
+                </div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+            </div>
+        </div>
+    `;
+    
+    document.body.insertAdjacentHTML('beforeend', toastHtml);
+    
+    const toastElement = document.querySelector('.toast:last-of-type');
+    const toast = new bootstrap.Toast(toastElement, { delay: 4000 });
+    toast.show();
+    
+    toastElement.addEventListener('hidden.bs.toast', function() {
+        this.remove();
+    });
+}
+</script>
+{% endblock %}

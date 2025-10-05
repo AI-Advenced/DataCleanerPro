@@ -1,0 +1,655 @@
+{% extends "base.html" %}
+
+{% block title %}Tâche {{ job.name }} - DataCleaner-Pro{% endblock %}
+
+{% block guest_content %}
+<!-- En-tête -->
+<div class="row mb-4">
+    <div class="col-12">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{{ url_for('main.dashboard') }}">Dashboard</a></li>
+                <li class="breadcrumb-item"><a href="{{ url_for('main.list_datasets') }}">Datasets</a></li>
+                {% if job.dataset %}
+                <li class="breadcrumb-item"><a href="{{ url_for('main.view_dataset', dataset_id=job.dataset.id) }}">{{ job.dataset.name }}</a></li>
+                {% endif %}
+                <li class="breadcrumb-item active">Tâche de nettoyage</li>
+            </ol>
+        </nav>
+        
+        <div class="d-flex align-items-center justify-content-between">
+            <div>
+                <h1 class="display-6 text-primary mb-0">
+                    <i class="fas fa-broom me-3"></i>
+                    {{ job.name }}
+                </h1>
+                <p class="text-muted mb-0">Tâche de nettoyage de données</p>
+            </div>
+            
+            <div class="text-end">
+                <!-- Badge de statut -->
+                {% if job.status == 'completed' %}
+                    <span class="badge bg-success fs-6 mb-2">
+                        <i class="fas fa-check me-1"></i>Terminé
+                    </span>
+                {% elif job.status == 'running' %}
+                    <span class="badge bg-primary fs-6 mb-2">
+                        <i class="fas fa-spinner fa-spin me-1"></i>En cours
+                    </span>
+                {% elif job.status == 'failed' %}
+                    <span class="badge bg-danger fs-6 mb-2">
+                        <i class="fas fa-times me-1"></i>Échoué
+                    </span>
+                {% else %}
+                    <span class="badge bg-secondary fs-6 mb-2">
+                        <i class="fas fa-clock me-1"></i>En attente
+                    </span>
+                {% endif %}
+                
+                <div class="btn-group" role="group">
+                    {% if job.status == 'running' %}
+                        <button class="btn btn-outline-warning" onclick="pauseJob()">
+                            <i class="fas fa-pause me-1"></i>Pause
+                        </button>
+                        <button class="btn btn-outline-danger" onclick="cancelJob()">
+                            <i class="fas fa-stop me-1"></i>Arrêter
+                        </button>
+                    {% elif job.status == 'failed' %}
+                        <button class="btn btn-outline-primary" onclick="retryJob()">
+                            <i class="fas fa-redo me-1"></i>Recommencer
+                        </button>
+                    {% elif job.status == 'completed' %}
+                        <a href="{{ url_for('main.view_dataset', dataset_id=job.dataset.id) }}" class="btn btn-success">
+                            <i class="fas fa-eye me-1"></i>Voir résultat
+                        </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Barre de progression -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <h6 class="mb-0">Progression</h6>
+                    <span class="badge bg-info">{{ job.progress }}%</span>
+                </div>
+                <div class="progress mb-3" style="height: 20px;">
+                    <div class="progress-bar 
+                               {% if job.status == 'completed' %}bg-success
+                               {% elif job.status == 'failed' %}bg-danger
+                               {% elif job.status == 'running' %}bg-primary progress-bar-striped progress-bar-animated
+                               {% else %}bg-secondary{% endif %}" 
+                         role="progressbar" 
+                         style="width: {{ job.progress }}%"
+                         id="progressBar">
+                        {{ job.progress }}%
+                    </div>
+                </div>
+                
+                <div class="row text-center">
+                    <div class="col-md-3">
+                        <div class="d-flex flex-column">
+                            <span class="fs-5 fw-bold text-primary">{{ format_datetime_global(job.created_at) }}</span>
+                            <small class="text-muted">Créé</small>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="d-flex flex-column">
+                            <span class="fs-5 fw-bold text-info">
+                                {% if job.started_at %}{{ format_datetime_global(job.started_at) }}{% else %}N/A{% endif %}
+                            </span>
+                            <small class="text-muted">Démarré</small>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="d-flex flex-column">
+                            <span class="fs-5 fw-bold text-success">
+                                {% if job.completed_at %}{{ format_datetime_global(job.completed_at) }}{% else %}N/A{% endif %}
+                            </span>
+                            <small class="text-muted">Terminé</small>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="d-flex flex-column">
+                            <span class="fs-5 fw-bold text-warning">
+                                {% if job.get_duration() %}{{ job.get_duration() }}{% else %}N/A{% endif %}
+                            </span>
+                            <small class="text-muted">Durée</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Informations sur le dataset et résultats -->
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card h-100">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-database me-2"></i>Dataset Source
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if job.dataset %}
+                    <div class="d-flex align-items-center mb-3">
+                        {% if job.dataset.file_type == 'csv' %}
+                            <i class="fas fa-file-csv text-success fa-2x me-3"></i>
+                        {% elif job.dataset.file_type in ['xlsx', 'xls'] %}
+                            <i class="fas fa-file-excel text-primary fa-2x me-3"></i>
+                        {% elif job.dataset.file_type == 'json' %}
+                            <i class="fas fa-file-code text-info fa-2x me-3"></i>
+                        {% else %}
+                            <i class="fas fa-file text-secondary fa-2x me-3"></i>
+                        {% endif %}
+                        
+                        <div>
+                            <h6 class="mb-1">{{ job.dataset.name }}</h6>
+                            <small class="text-muted">{{ job.dataset.filename }}</small>
+                        </div>
+                    </div>
+                    
+                    <dl class="row">
+                        <dt class="col-sm-6">Lignes originales:</dt>
+                        <dd class="col-sm-6">{{ "{:,}".format(job.original_rows) if job.original_rows else 'N/A' }}</dd>
+                        
+                        <dt class="col-sm-6">Taille:</dt>
+                        <dd class="col-sm-6">{{ format_file_size_global(job.dataset.file_size) }}</dd>
+                        
+                        <dt class="col-sm-6">Type:</dt>
+                        <dd class="col-sm-6">
+                            <span class="badge bg-secondary">{{ job.dataset.file_type.upper() }}</span>
+                        </dd>
+                    </dl>
+                    
+                    <div class="mt-3">
+                        <a href="{{ url_for('main.view_dataset', dataset_id=job.dataset.id) }}" 
+                           class="btn btn-outline-primary btn-sm">
+                            <i class="fas fa-eye me-1"></i>Voir le dataset
+                        </a>
+                    </div>
+                {% else %}
+                    <div class="text-center py-3">
+                        <i class="fas fa-exclamation-triangle text-warning fa-3x mb-3"></i>
+                        <p class="text-muted">Dataset source non disponible</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card h-100">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-chart-bar me-2"></i>Résultats du Nettoyage
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if job.status == 'completed' %}
+                    <div class="row text-center mb-3">
+                        <div class="col-6">
+                            <div class="border rounded p-3">
+                                <h4 class="text-success mb-1">{{ "{:,}".format(job.cleaned_rows) if job.cleaned_rows else 'N/A' }}</h4>
+                                <small class="text-muted">Lignes finales</small>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="border rounded p-3">
+                                <h4 class="text-danger mb-1">{{ "{:,}".format(job.removed_duplicates) if job.removed_duplicates else '0' }}</h4>
+                                <small class="text-muted">Doublons supprimés</small>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row text-center mb-3">
+                        <div class="col-6">
+                            <div class="border rounded p-3">
+                                <h4 class="text-info mb-1">{{ "{:,}".format(job.filled_missing_values) if job.filled_missing_values else '0' }}</h4>
+                                <small class="text-muted">Valeurs corrigées</small>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="border rounded p-3">
+                                <h4 class="text-warning mb-1">{{ "{:,}".format(job.detected_outliers) if job.detected_outliers else '0' }}</h4>
+                                <small class="text-muted">Outliers détectés</small>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Amélioration de la qualité -->
+                    {% if job.original_rows and job.cleaned_rows %}
+                        {% set reduction_pct = ((job.original_rows - job.cleaned_rows) / job.original_rows * 100) %}
+                        <div class="alert alert-success border-0">
+                            <i class="fas fa-thumbs-up me-2"></i>
+                            <strong>Nettoyage réussi!</strong>
+                            {% if reduction_pct > 0 %}
+                                {{ "%.1f"|format(reduction_pct) }}% des données problématiques ont été traitées.
+                            {% else %}
+                                Vos données étaient déjà de bonne qualité.
+                            {% endif %}
+                        </div>
+                    {% endif %}
+                    
+                {% elif job.status == 'failed' %}
+                    <div class="alert alert-danger border-0">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        <strong>Échec du nettoyage</strong>
+                        {% if job.error_message %}
+                            <p class="mb-0 mt-2">{{ job.error_message }}</p>
+                        {% endif %}
+                    </div>
+                    
+                {% elif job.status == 'running' %}
+                    <div class="text-center py-4">
+                        <div class="spinner-border text-primary mb-3" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <p class="text-muted mb-0">Nettoyage en cours...</p>
+                        <small class="text-muted">Veuillez patienter</small>
+                    </div>
+                    
+                {% else %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-hourglass-start text-secondary fa-3x mb-3"></i>
+                        <p class="text-muted mb-0">Tâche en attente</p>
+                        <small class="text-muted">Le traitement va bientôt commencer</small>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Configuration et logs -->
+<div class="row">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">
+                    <i class="fas fa-cogs me-2"></i>Configuration
+                </h5>
+                <span class="badge bg-info">{{ job.cleaning_mode.title() }}</span>
+            </div>
+            <div class="card-body">
+                <dl class="row">
+                    <dt class="col-sm-6">Mode de nettoyage:</dt>
+                    <dd class="col-sm-6">
+                        <span class="badge bg-primary">{{ job.cleaning_mode.title() }}</span>
+                    </dd>
+                    
+                    <dt class="col-sm-6">Suppression doublons:</dt>
+                    <dd class="col-sm-6">
+                        {% if job.remove_duplicates %}
+                            <i class="fas fa-check text-success"></i> Activé
+                        {% else %}
+                            <i class="fas fa-times text-danger"></i> Désactivé
+                        {% endif %}
+                    </dd>
+                    
+                    <dt class="col-sm-6">Valeurs manquantes:</dt>
+                    <dd class="col-sm-6">
+                        <span class="badge bg-secondary">{{ job.handle_missing_values.title() }}</span>
+                    </dd>
+                    
+                    <dt class="col-sm-6">Détection outliers:</dt>
+                    <dd class="col-sm-6">
+                        {% if job.detect_outliers %}
+                            <i class="fas fa-check text-success"></i> Activé
+                        {% else %}
+                            <i class="fas fa-times text-danger"></i> Désactivé
+                        {% endif %}
+                    </dd>
+                    
+                    <dt class="col-sm-6">Standardisation:</dt>
+                    <dd class="col-sm-6">
+                        {% if job.standardize_formats %}
+                            <i class="fas fa-check text-success"></i> Activé
+                        {% else %}
+                            <i class="fas fa-times text-danger"></i> Désactivé
+                        {% endif %}
+                    </dd>
+                </dl>
+                
+                <div class="mt-3">
+                    <button class="btn btn-outline-info btn-sm" onclick="exportConfiguration()">
+                        <i class="fas fa-download me-1"></i>Exporter config
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">
+                    <i class="fas fa-terminal me-2"></i>Journal d'Activité
+                </h5>
+                <button class="btn btn-sm btn-outline-secondary" onclick="refreshLogs()" id="refreshLogsBtn">
+                    <i class="fas fa-sync-alt"></i>
+                </button>
+            </div>
+            <div class="card-body" style="max-height: 400px; overflow-y: auto;">
+                <div id="logContainer">
+                    {% if job.get_log_messages() %}
+                        {% for log in job.get_log_messages() %}
+                        <div class="log-entry mb-2">
+                            <div class="d-flex align-items-start">
+                                <span class="badge 
+                                           {% if log.level == 'error' %}bg-danger
+                                           {% elif log.level == 'warning' %}bg-warning
+                                           {% elif log.level == 'success' %}bg-success
+                                           {% else %}bg-info{% endif %} 
+                                           me-2 mt-1">
+                                    {% if log.level == 'error' %}<i class="fas fa-times"></i>
+                                    {% elif log.level == 'warning' %}<i class="fas fa-exclamation-triangle"></i>
+                                    {% elif log.level == 'success' %}<i class="fas fa-check"></i>
+                                    {% else %}<i class="fas fa-info"></i>{% endif %}
+                                </span>
+                                <div class="flex-grow-1">
+                                    <small class="text-muted d-block">{{ log.timestamp }}</small>
+                                    <span>{{ log.message }}</span>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="text-center py-3">
+                            <i class="fas fa-file-alt text-muted fa-2x mb-2"></i>
+                            <p class="text-muted mb-0">Aucun log disponible</p>
+                        </div>
+                    {% endif %}
+                </div>
+                
+                <!-- Auto-scroll pour les logs en temps réel -->
+                {% if job.status == 'running' %}
+                <div class="text-center mt-3">
+                    <small class="text-muted">
+                        <i class="fas fa-circle text-success blink"></i>
+                        Logs en temps réel
+                    </small>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Actions flottantes (si tâche en cours) -->
+{% if job.status == 'running' %}
+<div class="position-fixed bottom-0 end-0 p-3" style="z-index: 1000;">
+    <div class="card shadow">
+        <div class="card-body text-center">
+            <h6 class="card-title">Tâche en cours</h6>
+            <div class="progress mb-2" style="height: 8px;">
+                <div class="progress-bar progress-bar-striped progress-bar-animated" 
+                     style="width: {{ job.progress }}%"></div>
+            </div>
+            <div class="btn-group" role="group">
+                <button class="btn btn-sm btn-outline-warning" onclick="pauseJob()">
+                    <i class="fas fa-pause"></i>
+                </button>
+                <button class="btn btn-sm btn-outline-danger" onclick="cancelJob()">
+                    <i class="fas fa-stop"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<script>
+// Variables globales
+const jobId = {{ job.id }};
+const jobStatus = '{{ job.status }}';
+let refreshInterval;
+
+// Fonctions de contrôle des tâches
+function pauseJob() {
+    if (confirm('Voulez-vous mettre en pause cette tâche ?')) {
+        fetch(`/api/v1/jobs/${jobId}/pause`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector('meta[name=csrf-token]').getAttribute('content')
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert('Erreur: ' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Erreur:', error);
+            alert('Erreur lors de la mise en pause');
+        });
+    }
+}
+
+function cancelJob() {
+    if (confirm('Voulez-vous annuler cette tâche ? Cette action est irréversible.')) {
+        fetch(`/api/v1/jobs/${jobId}/cancel`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector('meta[name=csrf-token]').getAttribute('content')
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert('Erreur: ' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Erreur:', error);
+            alert('Erreur lors de l\'annulation');
+        });
+    }
+}
+
+function retryJob() {
+    if (confirm('Voulez-vous relancer cette tâche ?')) {
+        fetch(`/api/v1/jobs/${jobId}/retry`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector('meta[name=csrf-token]').getAttribute('content')
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert('Erreur: ' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Erreur:', error);
+            alert('Erreur lors du redémarrage');
+        });
+    }
+}
+
+function refreshLogs() {
+    const btn = document.getElementById('refreshLogsBtn');
+    const originalContent = btn.innerHTML;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+    btn.disabled = true;
+    
+    fetch(`/api/v1/jobs/${jobId}/logs`)
+        .then(response => response.json())
+        .then(data => {
+            updateLogs(data.logs);
+            btn.innerHTML = originalContent;
+            btn.disabled = false;
+        })
+        .catch(error => {
+            console.error('Erreur:', error);
+            btn.innerHTML = originalContent;
+            btn.disabled = false;
+        });
+}
+
+function updateLogs(logs) {
+    const container = document.getElementById('logContainer');
+    
+    if (logs && logs.length > 0) {
+        const logsHtml = logs.map(log => `
+            <div class="log-entry mb-2">
+                <div class="d-flex align-items-start">
+                    <span class="badge ${getLogBadgeClass(log.level)} me-2 mt-1">
+                        ${getLogIcon(log.level)}
+                    </span>
+                    <div class="flex-grow-1">
+                        <small class="text-muted d-block">${log.timestamp}</small>
+                        <span>${log.message}</span>
+                    </div>
+                </div>
+            </div>
+        `).join('');
+        
+        container.innerHTML = logsHtml;
+        
+        // Auto-scroll vers le bas
+        container.scrollTop = container.scrollHeight;
+    }
+}
+
+function getLogBadgeClass(level) {
+    switch(level) {
+        case 'error': return 'bg-danger';
+        case 'warning': return 'bg-warning';
+        case 'success': return 'bg-success';
+        default: return 'bg-info';
+    }
+}
+
+function getLogIcon(level) {
+    switch(level) {
+        case 'error': return '<i class="fas fa-times"></i>';
+        case 'warning': return '<i class="fas fa-exclamation-triangle"></i>';
+        case 'success': return '<i class="fas fa-check"></i>';
+        default: return '<i class="fas fa-info"></i>';
+    }
+}
+
+function exportConfiguration() {
+    const config = {
+        job_name: '{{ job.name }}',
+        cleaning_mode: '{{ job.cleaning_mode }}',
+        remove_duplicates: {{ 'true' if job.remove_duplicates else 'false' }},
+        handle_missing_values: '{{ job.handle_missing_values }}',
+        detect_outliers: {{ 'true' if job.detect_outliers else 'false' }},
+        standardize_formats: {{ 'true' if job.standardize_formats else 'false' }}
+    };
+    
+    const dataStr = JSON.stringify(config, null, 2);
+    const dataBlob = new Blob([dataStr], {type:'application/json'});
+    
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(dataBlob);
+    link.download = `cleaning_config_${Date.now()}.json`;
+    link.click();
+}
+
+// Initialisation
+document.addEventListener('DOMContentLoaded', function() {
+    // Si la tâche est en cours, rafraîchir automatiquement
+    if (jobStatus === 'running') {
+        refreshInterval = setInterval(() => {
+            refreshJobStatus();
+        }, 5000); // Toutes les 5 secondes
+    }
+    
+    // Animation des cartes
+    const cards = document.querySelectorAll('.card');
+    cards.forEach((card, index) => {
+        card.style.opacity = '0';
+        card.style.transform = 'translateY(20px)';
+        
+        setTimeout(() => {
+            card.style.transition = 'all 0.5s ease';
+            card.style.opacity = '1';
+            card.style.transform = 'translateY(0)';
+        }, index * 100);
+    });
+});
+
+function refreshJobStatus() {
+    fetch(`/api/v1/jobs/${jobId}`)
+        .then(response => response.json())
+        .then(data => {
+            // Mettre à jour la barre de progression
+            const progressBar = document.getElementById('progressBar');
+            if (progressBar) {
+                progressBar.style.width = data.progress + '%';
+                progressBar.textContent = data.progress + '%';
+            }
+            
+            // Si la tâche est terminée, recharger la page
+            if (data.status !== 'running') {
+                clearInterval(refreshInterval);
+                location.reload();
+            }
+        })
+        .catch(error => {
+            console.error('Erreur lors du rafraîchissement:', error);
+        });
+}
+
+// Nettoyage lors de la fermeture de la page
+window.addEventListener('beforeunload', function() {
+    if (refreshInterval) {
+        clearInterval(refreshInterval);
+    }
+});
+</script>
+
+<style>
+.log-entry {
+    font-size: 0.9rem;
+    line-height: 1.4;
+}
+
+.blink {
+    animation: blink 1s linear infinite;
+}
+
+@keyframes blink {
+    0%, 50% { opacity: 1; }
+    51%, 100% { opacity: 0.3; }
+}
+
+.position-fixed .card {
+    min-width: 200px;
+}
+
+@media (max-width: 768px) {
+    .display-6 {
+        font-size: 2rem;
+    }
+    
+    .position-fixed {
+        position: relative !important;
+        bottom: auto !important;
+        end: auto !important;
+        padding: 1rem !important;
+    }
+}
+</style>
+{% endblock %}

@@ -1,0 +1,771 @@
+{% extends "base.html" %}
+
+{% block title %}Nettoyer {{ dataset.name }} - DataCleaner-Pro{% endblock %}
+
+{% block guest_content %}
+<!-- En-tête -->
+<div class="row mb-4">
+    <div class="col-12">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{{ url_for('main.list_datasets') }}">Datasets</a></li>
+                <li class="breadcrumb-item"><a href="{{ url_for('main.view_dataset', dataset_id=dataset.id) }}">{{ dataset.name }}</a></li>
+                <li class="breadcrumb-item active">Nettoyage</li>
+            </ol>
+        </nav>
+        
+        <h1 class="display-5 text-primary mb-0">
+            <i class="fas fa-broom me-3"></i>
+            Nettoyage Intelligent
+        </h1>
+        <p class="lead text-muted">Configurez le nettoyage automatique de vos données</p>
+    </div>
+</div>
+
+<!-- Aperçu du dataset -->
+<div class="row mb-4">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-info-circle me-2"></i>
+                    Dataset: {{ dataset.name }}
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-3 text-center">
+                        {% if dataset.file_type == 'csv' %}
+                            <i class="fas fa-file-csv text-success fa-3x mb-2"></i>
+                        {% elif dataset.file_type in ['xlsx', 'xls'] %}
+                            <i class="fas fa-file-excel text-primary fa-3x mb-2"></i>
+                        {% elif dataset.file_type == 'json' %}
+                            <i class="fas fa-file-code text-info fa-3x mb-2"></i>
+                        {% else %}
+                            <i class="fas fa-file text-secondary fa-3x mb-2"></i>
+                        {% endif %}
+                        <p class="mb-0"><strong>{{ dataset.file_type.upper() }}</strong></p>
+                    </div>
+                    <div class="col-md-9">
+                        <dl class="row mb-0">
+                            <dt class="col-sm-4">Lignes:</dt>
+                            <dd class="col-sm-8">{{ "{:,}".format(dataset.rows_count) if dataset.rows_count else 'N/A' }}</dd>
+                            
+                            <dt class="col-sm-4">Colonnes:</dt>
+                            <dd class="col-sm-8">{{ dataset.columns_count if dataset.columns_count else 'N/A' }}</dd>
+                            
+                            <dt class="col-sm-4">Taille:</dt>
+                            <dd class="col-sm-8">{{ format_file_size_global(dataset.file_size) }}</dd>
+                            
+                            <dt class="col-sm-4">Problèmes détectés:</dt>
+                            <dd class="col-sm-8">
+                                {% if dataset.has_duplicates %}
+                                    <span class="badge bg-warning me-1">{{ dataset.duplicates_count }} doublons</span>
+                                {% endif %}
+                                {% if dataset.has_missing_values %}
+                                    <span class="badge bg-danger me-1">{{ dataset.missing_values_count }} valeurs manquantes</span>
+                                {% endif %}
+                                {% if not dataset.has_duplicates and not dataset.has_missing_values %}
+                                    <span class="badge bg-success">Aucun problème majeur</span>
+                                {% endif %}
+                            </dd>
+                        </dl>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card bg-info text-white">
+            <div class="card-body text-center">
+                <i class="fas fa-magic fa-3x mb-3"></i>
+                <h5>Nettoyage IA</h5>
+                <p class="mb-0">Notre IA analysera vos données et appliquera les meilleures techniques de nettoyage automatiquement.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Formulaire de configuration -->
+<div class="row">
+    <div class="col-md-8">
+        <form method="POST" id="cleaningForm">
+            {{ form.hidden_tag() }}
+            
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-cogs me-2"></i>Configuration du Nettoyage
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <!-- Nom de la tâche -->
+                    <div class="mb-4">
+                        {{ form.job_name.label(class="form-label fw-bold") }}
+                        {{ form.job_name(class="form-control") }}
+                        {% if form.job_name.errors %}
+                            <div class="text-danger mt-1">
+                                {% for error in form.job_name.errors %}
+                                    <small>{{ error }}</small>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+                    
+                    <!-- Mode de nettoyage -->
+                    <div class="mb-4">
+                        {{ form.cleaning_mode.label(class="form-label fw-bold") }}
+                        {{ form.cleaning_mode(class="form-select", onchange="updateCleaningMode()") }}
+                        {% if form.cleaning_mode.errors %}
+                            <div class="text-danger mt-1">
+                                {% for error in form.cleaning_mode.errors %}
+                                    <small>{{ error }}</small>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                        
+                        <div class="mt-2" id="modeDescription">
+                            <div class="alert alert-info cleaning-mode-desc" id="desc-automatic">
+                                <i class="fas fa-robot me-2"></i>
+                                <strong>Mode Automatique:</strong> L'IA détermine les meilleures stratégies de nettoyage basées sur l'analyse de vos données.
+                            </div>
+                            <div class="alert alert-warning cleaning-mode-desc d-none" id="desc-conservative">
+                                <i class="fas fa-shield-alt me-2"></i>
+                                <strong>Mode Conservateur:</strong> Nettoyage minimal qui préserve au maximum vos données originales.
+                            </div>
+                            <div class="alert alert-danger cleaning-mode-desc d-none" id="desc-aggressive">
+                                <i class="fas fa-fire me-2"></i>
+                                <strong>Mode Agressif:</strong> Nettoyage approfondi qui peut supprimer plus de données pour optimiser la qualité.
+                            </div>
+                            <div class="alert alert-secondary cleaning-mode-desc d-none" id="desc-custom">
+                                <i class="fas fa-user-cog me-2"></i>
+                                <strong>Mode Personnalisé:</strong> Configurez manuellement chaque aspect du nettoyage.
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Options de nettoyage -->
+                    <div id="cleaningOptions">
+                        <!-- Suppression des doublons -->
+                        <div class="card mb-3">
+                            <div class="card-header d-flex justify-content-between align-items-center">
+                                <h6 class="mb-0">
+                                    <i class="fas fa-clone me-2"></i>Gestion des Doublons
+                                </h6>
+                                <div class="form-check form-switch">
+                                    {{ form.remove_duplicates(class="form-check-input", onchange="toggleSection('duplicates')") }}
+                                </div>
+                            </div>
+                            <div class="card-body" id="duplicates-section">
+                                <p class="text-muted">
+                                    {% if dataset.duplicates_count > 0 %}
+                                        <i class="fas fa-exclamation-triangle text-warning me-2"></i>
+                                        {{ dataset.duplicates_count }} doublons détectés dans votre dataset.
+                                    {% else %}
+                                        <i class="fas fa-check text-success me-2"></i>
+                                        Aucun doublon détecté dans votre dataset.
+                                    {% endif %}
+                                </p>
+                                <div class="alert alert-info">
+                                    <strong>Stratégie:</strong> Suppression automatique basée sur tous les champs. 
+                                    Les premières occurrences seront conservées.
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Valeurs manquantes -->
+                        <div class="card mb-3">
+                            <div class="card-header">
+                                <h6 class="mb-0">
+                                    <i class="fas fa-question-circle me-2"></i>Valeurs Manquantes
+                                </h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="mb-3">
+                                    {{ form.handle_missing_values.label(class="form-label fw-semibold") }}
+                                    {{ form.handle_missing_values(class="form-select", onchange="updateMissingDescription()") }}
+                                </div>
+                                
+                                {% if dataset.missing_values_count > 0 %}
+                                    <div class="alert alert-warning">
+                                        <i class="fas fa-exclamation-triangle me-2"></i>
+                                        {{ dataset.missing_values_count }} valeurs manquantes détectées.
+                                    </div>
+                                {% endif %}
+                                
+                                <div id="missingDescription">
+                                    <div class="alert alert-info missing-desc" id="missing-auto">
+                                        <strong>Automatique:</strong> L'IA choisira la meilleure méthode selon le type de colonne.
+                                    </div>
+                                    <div class="alert alert-danger missing-desc d-none" id="missing-drop">
+                                        <strong>Supprimer:</strong> Les lignes avec des valeurs manquantes seront supprimées.
+                                    </div>
+                                    <div class="alert alert-primary missing-desc d-none" id="missing-fill_mean">
+                                        <strong>Moyenne:</strong> Remplacer par la moyenne (colonnes numériques uniquement).
+                                    </div>
+                                    <div class="alert alert-primary missing-desc d-none" id="missing-fill_median">
+                                        <strong>Médiane:</strong> Remplacer par la médiane (colonnes numériques uniquement).
+                                    </div>
+                                    <div class="alert alert-primary missing-desc d-none" id="missing-fill_mode">
+                                        <strong>Mode:</strong> Remplacer par la valeur la plus fréquente.
+                                    </div>
+                                    <div class="alert alert-info missing-desc d-none" id="missing-interpolate">
+                                        <strong>Interpolation:</strong> Estimer les valeurs basées sur les données adjacentes.
+                                    </div>
+                                    <div class="alert alert-secondary missing-desc d-none" id="missing-forward_fill">
+                                        <strong>Report avant:</strong> Utiliser la dernière valeur valide.
+                                    </div>
+                                    <div class="alert alert-secondary missing-desc d-none" id="missing-backward_fill">
+                                        <strong>Report arrière:</strong> Utiliser la prochaine valeur valide.
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Détection des outliers -->
+                        <div class="card mb-3">
+                            <div class="card-header d-flex justify-content-between align-items-center">
+                                <h6 class="mb-0">
+                                    <i class="fas fa-exclamation-triangle me-2"></i>Valeurs Aberrantes
+                                </h6>
+                                <div class="form-check form-switch">
+                                    {{ form.detect_outliers(class="form-check-input", onchange="toggleSection('outliers')") }}
+                                </div>
+                            </div>
+                            <div class="card-body" id="outliers-section">
+                                <div class="mb-3">
+                                    {{ form.outlier_method.label(class="form-label fw-semibold") }}
+                                    {{ form.outlier_method(class="form-select", onchange="updateOutlierDescription()") }}
+                                </div>
+                                
+                                <div id="outlierDescription">
+                                    <div class="alert alert-info outlier-desc" id="outlier-iqr">
+                                        <strong>IQR:</strong> Détection basée sur l'écart interquartile (Q3 - Q1).
+                                    </div>
+                                    <div class="alert alert-info outlier-desc d-none" id="outlier-zscore">
+                                        <strong>Z-Score:</strong> Détection basée sur l'écart-type (valeurs > 3 σ).
+                                    </div>
+                                    <div class="alert alert-info outlier-desc d-none" id="outlier-isolation_forest">
+                                        <strong>Isolation Forest:</strong> Méthode ML avancée pour la détection d'anomalies.
+                                    </div>
+                                    <div class="alert alert-info outlier-desc d-none" id="outlier-local_outlier_factor">
+                                        <strong>LOF:</strong> Détection basée sur la densité locale des données.
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Options avancées -->
+                        <div class="card mb-3">
+                            <div class="card-header">
+                                <h6 class="mb-0">
+                                    <i class="fas fa-cogs me-2"></i>Options Avancées
+                                </h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="form-check mb-3">
+                                            {{ form.standardize_formats(class="form-check-input") }}
+                                            {{ form.standardize_formats.label(class="form-check-label") }}
+                                            <small class="form-text text-muted d-block">
+                                                Uniformise les formats de dates, nombres et textes
+                                            </small>
+                                        </div>
+                                        
+                                        <div class="form-check mb-3">
+                                            {{ form.normalize_text(class="form-check-input") }}
+                                            {{ form.normalize_text.label(class="form-check-label") }}
+                                            <small class="form-text text-muted d-block">
+                                                Nettoie les espaces et la casse du texte
+                                            </small>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="form-check mb-3">
+                                            {{ form.convert_data_types(class="form-check-input") }}
+                                            {{ form.convert_data_types.label(class="form-check-label") }}
+                                            <small class="form-text text-muted d-block">
+                                                Optimise automatiquement les types de données
+                                            </small>
+                                        </div>
+                                        
+                                        <div class="form-check mb-3">
+                                            {{ form.backup_original(class="form-check-input") }}
+                                            {{ form.backup_original.label(class="form-check-label") }}
+                                            <small class="form-text text-muted d-block">
+                                                Crée une sauvegarde avant nettoyage
+                                            </small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Estimation de l'impact -->
+                    <div class="card bg-light">
+                        <div class="card-body">
+                            <h6 class="mb-3">
+                                <i class="fas fa-calculator me-2"></i>Estimation de l'Impact
+                            </h6>
+                            <div id="impactEstimation">
+                                <div class="row text-center">
+                                    <div class="col-md-3">
+                                        <div class="mb-2">
+                                            <strong class="text-primary fs-4" id="estimatedRows">{{ "{:,}".format(dataset.rows_count) if dataset.rows_count else '0' }}</strong>
+                                        </div>
+                                        <small class="text-muted">Lignes estimées après nettoyage</small>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <div class="mb-2">
+                                            <strong class="text-success fs-4" id="estimatedQuality">95%</strong>
+                                        </div>
+                                        <small class="text-muted">Qualité estimée</small>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <div class="mb-2">
+                                            <strong class="text-info fs-4" id="estimatedTime">2-5 min</strong>
+                                        </div>
+                                        <small class="text-muted">Temps estimé</small>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <div class="mb-2">
+                                            <strong class="text-warning fs-4" id="estimatedSize">{{ format_file_size_global(dataset.file_size) }}</strong>
+                                        </div>
+                                        <small class="text-muted">Taille estimée</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card-footer">
+                    <div class="d-flex justify-content-between">
+                        <a href="{{ url_for('main.view_dataset', dataset_id=dataset.id) }}" 
+                           class="btn btn-outline-secondary">
+                            <i class="fas fa-arrow-left me-2"></i>Retour
+                        </a>
+                        
+                        <div>
+                            <button type="button" class="btn btn-outline-primary me-2" onclick="previewCleaning()">
+                                <i class="fas fa-eye me-2"></i>Aperçu
+                            </button>
+                            {{ form.submit(class="btn btn-success btn-lg", id="startCleaningBtn") }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
+    
+    <!-- Panneau d'aide -->
+    <div class="col-md-4">
+        <div class="card sticky-top" style="top: 20px;">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-lightbulb me-2"></i>Conseils IA
+                </h5>
+            </div>
+            <div class="card-body">
+                <div id="aiRecommendations">
+                    {% if dataset.has_duplicates %}
+                    <div class="alert alert-warning border-0 mb-3">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        <strong>Doublons détectés:</strong>
+                        Nous recommandons de les supprimer pour améliorer la qualité de vos analyses.
+                    </div>
+                    {% endif %}
+                    
+                    {% if dataset.has_missing_values %}
+                    <div class="alert alert-info border-0 mb-3">
+                        <i class="fas fa-info-circle me-2"></i>
+                        <strong>Valeurs manquantes:</strong>
+                        Le mode automatique choisira la meilleure stratégie selon vos colonnes.
+                    </div>
+                    {% endif %}
+                    
+                    <div class="alert alert-success border-0 mb-3">
+                        <i class="fas fa-robot me-2"></i>
+                        <strong>Recommandation IA:</strong>
+                        Utilisez le mode automatique pour des résultats optimaux basés sur l'analyse de votre dataset.
+                    </div>
+                </div>
+                
+                <hr>
+                
+                <h6>Étapes du Nettoyage</h6>
+                <div class="timeline">
+                    <div class="timeline-item">
+                        <div class="timeline-marker bg-primary"></div>
+                        <div class="timeline-content">
+                            <small class="text-muted">Étape 1</small>
+                            <p class="mb-1">Analyse de la structure</p>
+                        </div>
+                    </div>
+                    <div class="timeline-item">
+                        <div class="timeline-marker bg-warning"></div>
+                        <div class="timeline-content">
+                            <small class="text-muted">Étape 2</small>
+                            <p class="mb-1">Suppression des doublons</p>
+                        </div>
+                    </div>
+                    <div class="timeline-item">
+                        <div class="timeline-marker bg-info"></div>
+                        <div class="timeline-content">
+                            <small class="text-muted">Étape 3</small>
+                            <p class="mb-1">Traitement des valeurs manquantes</p>
+                        </div>
+                    </div>
+                    <div class="timeline-item">
+                        <div class="timeline-marker bg-danger"></div>
+                        <div class="timeline-content">
+                            <small class="text-muted">Étape 4</small>
+                            <p class="mb-1">Détection des outliers</p>
+                        </div>
+                    </div>
+                    <div class="timeline-item">
+                        <div class="timeline-marker bg-success"></div>
+                        <div class="timeline-content">
+                            <small class="text-muted">Étape 5</small>
+                            <p class="mb-1">Standardisation finale</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal d'aperçu -->
+<div class="modal fade" id="previewModal" tabindex="-1">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Aperçu du Nettoyage</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6>Avant Nettoyage</h6>
+                        <div class="table-responsive" style="max-height: 400px;">
+                            <table class="table table-sm table-striped">
+                                <thead class="table-dark">
+                                    <tr><th>Données originales</th></tr>
+                                </thead>
+                                <tbody id="previewBefore">
+                                    <!-- Contenu généré dynamiquement -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>Après Nettoyage (Simulation)</h6>
+                        <div class="table-responsive" style="max-height: 400px;">
+                            <table class="table table-sm table-striped">
+                                <thead class="table-dark">
+                                    <tr><th>Données nettoyées</th></tr>
+                                </thead>
+                                <tbody id="previewAfter">
+                                    <!-- Contenu généré dynamiquement -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
+                <button type="button" class="btn btn-success" onclick="startCleaning()">
+                    <i class="fas fa-play me-2"></i>Lancer le Nettoyage
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Variables globales
+const originalRows = {{ dataset.rows_count if dataset.rows_count else 0 }};
+const duplicatesCount = {{ dataset.duplicates_count if dataset.duplicates_count else 0 }};
+const missingCount = {{ dataset.missing_values_count if dataset.missing_values_count else 0 }};
+
+function updateCleaningMode() {
+    const mode = document.getElementById('id_cleaning_mode').value;
+    const customOptions = document.getElementById('cleaningOptions');
+    
+    // Masquer toutes les descriptions
+    document.querySelectorAll('.cleaning-mode-desc').forEach(el => {
+        el.classList.add('d-none');
+    });
+    
+    // Afficher la description correspondante
+    document.getElementById(`desc-${mode}`).classList.remove('d-none');
+    
+    // Afficher/masquer les options personnalisées
+    if (mode === 'custom') {
+        customOptions.style.display = 'block';
+    } else {
+        customOptions.style.display = 'block'; // Toujours visible pour l'instant
+        
+        // Pré-configurer selon le mode
+        if (mode === 'automatic') {
+            document.getElementById('id_remove_duplicates').checked = true;
+            document.getElementById('id_handle_missing_values').value = 'auto';
+            document.getElementById('id_detect_outliers').checked = true;
+            document.getElementById('id_standardize_formats').checked = true;
+        } else if (mode === 'conservative') {
+            document.getElementById('id_remove_duplicates').checked = duplicatesCount > 0;
+            document.getElementById('id_handle_missing_values').value = 'fill_mode';
+            document.getElementById('id_detect_outliers').checked = false;
+            document.getElementById('id_standardize_formats').checked = true;
+        } else if (mode === 'aggressive') {
+            document.getElementById('id_remove_duplicates').checked = true;
+            document.getElementById('id_handle_missing_values').value = 'drop';
+            document.getElementById('id_detect_outliers').checked = true;
+            document.getElementById('id_standardize_formats').checked = true;
+        }
+    }
+    
+    updateImpactEstimation();
+}
+
+function updateMissingDescription() {
+    const method = document.getElementById('id_handle_missing_values').value;
+    
+    document.querySelectorAll('.missing-desc').forEach(el => {
+        el.classList.add('d-none');
+    });
+    
+    document.getElementById(`missing-${method}`).classList.remove('d-none');
+    updateImpactEstimation();
+}
+
+function updateOutlierDescription() {
+    const method = document.getElementById('id_outlier_method').value;
+    
+    document.querySelectorAll('.outlier-desc').forEach(el => {
+        el.classList.add('d-none');
+    });
+    
+    document.getElementById(`outlier-${method}`).classList.remove('d-none');
+}
+
+function toggleSection(sectionName) {
+    const section = document.getElementById(`${sectionName}-section`);
+    const toggle = event.target;
+    
+    if (toggle.checked) {
+        section.style.display = 'block';
+    } else {
+        section.style.display = 'none';
+    }
+    
+    updateImpactEstimation();
+}
+
+function updateImpactEstimation() {
+    let estimatedRows = originalRows;
+    let estimatedQuality = 70; // Score de base
+    let estimatedTime = '1-2 min';
+    
+    // Calcul basé sur les options sélectionnées
+    if (document.getElementById('id_remove_duplicates').checked && duplicatesCount > 0) {
+        estimatedRows -= duplicatesCount;
+        estimatedQuality += 10;
+    }
+    
+    const missingMethod = document.getElementById('id_handle_missing_values').value;
+    if (missingMethod === 'drop' && missingCount > 0) {
+        estimatedRows -= Math.floor(missingCount / {{ dataset.columns_count if dataset.columns_count else 1 }});
+        estimatedQuality += 5;
+    } else if (missingMethod !== 'auto' && missingCount > 0) {
+        estimatedQuality += 15;
+    }
+    
+    if (document.getElementById('id_detect_outliers').checked) {
+        estimatedRows -= Math.floor(estimatedRows * 0.02); // ~2% d'outliers
+        estimatedQuality += 10;
+        estimatedTime = '3-5 min';
+    }
+    
+    if (document.getElementById('id_standardize_formats').checked) {
+        estimatedQuality += 5;
+    }
+    
+    // Mise à jour de l'affichage
+    document.getElementById('estimatedRows').textContent = estimatedRows.toLocaleString();
+    document.getElementById('estimatedQuality').textContent = Math.min(estimatedQuality, 98) + '%';
+    document.getElementById('estimatedTime').textContent = estimatedTime;
+    
+    // Couleur selon la qualité estimée
+    const qualityElement = document.getElementById('estimatedQuality');
+    if (estimatedQuality >= 90) {
+        qualityElement.className = 'text-success fs-4';
+    } else if (estimatedQuality >= 80) {
+        qualityElement.className = 'text-info fs-4';
+    } else if (estimatedQuality >= 70) {
+        qualityElement.className = 'text-warning fs-4';
+    } else {
+        qualityElement.className = 'text-danger fs-4';
+    }
+}
+
+function previewCleaning() {
+    const btn = event.target;
+    const originalContent = btn.innerHTML;
+    btn.innerHTML = '<span class="loading-spinner me-2"></span>Génération...';
+    btn.disabled = true;
+    
+    // Simulation de génération d'aperçu
+    setTimeout(() => {
+        // Ici, vous feriez un appel AJAX pour obtenir l'aperçu
+        showPreviewModal();
+        
+        btn.innerHTML = originalContent;
+        btn.disabled = false;
+    }, 2000);
+}
+
+function showPreviewModal() {
+    // Données simulées pour l'aperçu
+    const beforeData = [
+        'Données avec doublons et valeurs manquantes',
+        'ID: 1, Nom: John, Age: null, Email: john@test.com',
+        'ID: 2, Nom: Jane, Age: 25, Email: jane@test.com',
+        'ID: 1, Nom: John, Age: null, Email: john@test.com', // Doublon
+        'ID: 3, Nom: , Age: 30, Email: invalid-email' // Valeur manquante et email invalide
+    ];
+    
+    const afterData = [
+        'Données nettoyées et standardisées',
+        'ID: 1, Nom: John, Age: 28 (estimé), Email: john@test.com',
+        'ID: 2, Nom: Jane, Age: 25, Email: jane@test.com',
+        'ID: 3, Nom: Unknown, Age: 30, Email: invalid@example.com (corrigé)'
+    ];
+    
+    document.getElementById('previewBefore').innerHTML = 
+        beforeData.map(row => `<tr><td>${row}</td></tr>`).join('');
+    
+    document.getElementById('previewAfter').innerHTML = 
+        afterData.map(row => `<tr><td>${row}</td></tr>`).join('');
+    
+    const modal = new bootstrap.Modal(document.getElementById('previewModal'));
+    modal.show();
+}
+
+function startCleaning() {
+    document.getElementById('previewModal').querySelector('.btn-close').click();
+    document.getElementById('startCleaningBtn').click();
+}
+
+// Initialisation
+document.addEventListener('DOMContentLoaded', function() {
+    updateCleaningMode();
+    updateMissingDescription();
+    updateOutlierDescription();
+    
+    // Écouter les changements pour mettre à jour l'estimation
+    document.querySelectorAll('input, select').forEach(element => {
+        element.addEventListener('change', updateImpactEstimation);
+    });
+    
+    // Animation des cartes
+    const cards = document.querySelectorAll('.card');
+    cards.forEach((card, index) => {
+        card.style.opacity = '0';
+        card.style.transform = 'translateY(20px)';
+        
+        setTimeout(() => {
+            card.style.transition = 'all 0.5s ease';
+            card.style.opacity = '1';
+            card.style.transform = 'translateY(0)';
+        }, index * 100);
+    });
+});
+
+// Validation du formulaire
+document.getElementById('cleaningForm').addEventListener('submit', function(e) {
+    const jobName = document.getElementById('id_job_name').value.trim();
+    
+    if (jobName.length < 3) {
+        e.preventDefault();
+        alert('Le nom de la tâche doit contenir au moins 3 caractères.');
+        return;
+    }
+    
+    // Confirmation si mode agressif
+    const mode = document.getElementById('id_cleaning_mode').value;
+    if (mode === 'aggressive') {
+        if (!confirm('Le mode agressif peut supprimer plus de données. Continuer ?')) {
+            e.preventDefault();
+            return;
+        }
+    }
+    
+    // Animation du bouton de soumission
+    const submitBtn = document.getElementById('startCleaningBtn');
+    submitBtn.innerHTML = '<span class="loading-spinner me-2"></span>Démarrage du nettoyage...';
+    submitBtn.disabled = true;
+});
+</script>
+
+<style>
+.timeline {
+    position: relative;
+    padding-left: 1.5rem;
+}
+
+.timeline-item {
+    position: relative;
+    padding-bottom: 1rem;
+}
+
+.timeline-item:not(:last-child)::before {
+    content: '';
+    position: absolute;
+    left: -1.3rem;
+    top: 1rem;
+    width: 2px;
+    height: 100%;
+    background-color: #dee2e6;
+}
+
+.timeline-marker {
+    position: absolute;
+    left: -1.5rem;
+    top: 0.2rem;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    border: 2px solid white;
+    box-shadow: 0 0 0 3px var(--bs-primary);
+}
+
+.timeline-content p {
+    font-size: 0.9rem;
+    line-height: 1.3;
+}
+
+.sticky-top {
+    position: sticky !important;
+}
+
+@media (max-width: 768px) {
+    .timeline {
+        padding-left: 1rem;
+    }
+    
+    .timeline-marker {
+        left: -1rem;
+    }
+    
+    .timeline-item:not(:last-child)::before {
+        left: -0.8rem;
+    }
+}
+</style>
+{% endblock %}

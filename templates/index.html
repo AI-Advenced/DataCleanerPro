@@ -1,0 +1,550 @@
+{% extends "base.html" %}
+
+{% block title %}DataCleaner-Pro - Plateforme IA de Nettoyage de Données{% endblock %}
+
+{% block content %}
+<!-- Hero Section -->
+<div class="hero-section">
+    <div class="container">
+        <h1 class="display-3 fw-bold">
+            <i class="fas fa-magic me-3"></i>
+            DataCleaner-Pro
+        </h1>
+        <p class="lead">
+            Transformez vos données brutes en insights exploitables avec notre plateforme 
+            de nettoyage et d'analyse automatique alimentée par l'Intelligence Artificielle.
+        </p>
+        <div class="mt-4">
+            <a href="{{ url_for('auth.register') }}" class="btn btn-light btn-lg me-3">
+                <i class="fas fa-rocket me-2"></i>
+                Commencer Gratuitement
+            </a>
+            <a href="#features" class="btn btn-outline-light btn-lg">
+                <i class="fas fa-play me-2"></i>
+                Découvrir
+            </a>
+        </div>
+        
+        <!-- Statistiques -->
+        <div class="row mt-5 text-center">
+            <div class="col-md-3">
+                <h3 class="fw-bold">{{ "{:,}".format(stats.users) }}+</h3>
+                <p class="mb-0">Utilisateurs Actifs</p>
+            </div>
+            <div class="col-md-3">
+                <h3 class="fw-bold">{{ "{:,}".format(stats.datasets) }}+</h3>
+                <p class="mb-0">Datasets Traités</p>
+            </div>
+            <div class="col-md-3">
+                <h3 class="fw-bold">{{ "{:,}".format(stats.analyses) }}+</h3>
+                <p class="mb-0">Analyses Réalisées</p>
+            </div>
+            <div class="col-md-3">
+                <h3 class="fw-bold">{{ "%.1f"|format(stats.data_processed) }}TB</h3>
+                <p class="mb-0">Données Traitées</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Features Section -->
+<div class="py-5" id="features">
+    <div class="container">
+        <div class="text-center mb-5">
+            <h2 class="display-5 fw-bold text-primary">
+                Fonctionnalités Révolutionnaires
+            </h2>
+            <p class="lead text-muted">
+                Des outils puissants pour transformer vos données en avantage concurrentiel
+            </p>
+        </div>
+        
+        <div class="row">
+            <div class="col-md-4">
+                <div class="card h-100 text-center">
+                    <div class="card-body">
+                        <div class="feature-icon">
+                            <i class="fas fa-broom"></i>
+                        </div>
+                        <h4 class="text-primary">Nettoyage IA Avancé</h4>
+                        <p class="text-muted">
+                            Nettoyage intelligent automatique avec détection des anomalies, 
+                            correction des erreurs et optimisation des types de données
+                        </p>
+                        <ul class="list-unstyled text-start">
+                            <li><i class="fas fa-check text-success me-2"></i>Détection automatique des doublons</li>
+                            <li><i class="fas fa-check text-success me-2"></i>Traitement des valeurs manquantes</li>
+                            <li><i class="fas fa-check text-success me-2"></i>Standardisation des formats</li>
+                            <li><i class="fas fa-check text-success me-2"></i>Gestion des outliers</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-4">
+                <div class="card h-100 text-center">
+                    <div class="card-body">
+                        <div class="feature-icon">
+                            <i class="fas fa-exchange-alt"></i>
+                        </div>
+                        <h4 class="text-primary">AutoETL Simplifié</h4>
+                        <p class="text-muted">
+                            Pipeline ETL automatisé supportant Excel, CSV, JSON et bases de données
+                            avec transformations intelligentes
+                        </p>
+                        <ul class="list-unstyled text-start">
+                            <li><i class="fas fa-check text-success me-2"></i>Connecteurs multiples</li>
+                            <li><i class="fas fa-check text-success me-2"></i>Transformations automatiques</li>
+                            <li><i class="fas fa-check text-success me-2"></i>Fusion de datasets</li>
+                            <li><i class="fas fa-check text-success me-2"></i>Export multi-format</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-4">
+                <div class="card h-100 text-center">
+                    <div class="card-body">
+                        <div class="feature-icon">
+                            <i class="fas fa-chart-bar"></i>
+                        </div>
+                        <h4 class="text-primary">Analyse Avancée</h4>
+                        <p class="text-muted">
+                            Analyses statistiques complètes, machine learning automatique 
+                            et visualisations interactives
+                        </p>
+                        <ul class="list-unstyled text-start">
+                            <li><i class="fas fa-check text-success me-2"></i>Statistiques descriptives</li>
+                            <li><i class="fas fa-check text-success me-2"></i>ML automatique</li>
+                            <li><i class="fas fa-check text-success me-2"></i>Clustering intelligent</li>
+                            <li><i class="fas fa-check text-success me-2"></i>Visualisations dynamiques</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Avantages -->
+<div class="py-5 bg-light">
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col-md-6">
+                <h2 class="display-6 fw-bold text-primary mb-4">
+                    Pourquoi choisir DataCleaner-Pro ?
+                </h2>
+                <div class="row g-3">
+                    <div class="col-12">
+                        <div class="d-flex">
+                            <div class="flex-shrink-0">
+                                <i class="fas fa-rocket text-primary fs-4"></i>
+                            </div>
+                            <div class="flex-grow-1 ms-3">
+                                <h5>Gain de temps considérable</h5>
+                                <p class="text-muted">Automatisation complète des tâches répétitives de nettoyage</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-12">
+                        <div class="d-flex">
+                            <div class="flex-shrink-0">
+                                <i class="fas fa-shield-alt text-primary fs-4"></i>
+                            </div>
+                            <div class="flex-grow-1 ms-3">
+                                <h5>Qualité de données garantie</h5>
+                                <p class="text-muted">Algorithmes éprouvés pour une qualité optimale</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-12">
+                        <div class="d-flex">
+                            <div class="flex-shrink-0">
+                                <i class="fas fa-users text-primary fs-4"></i>
+                            </div>
+                            <div class="flex-grow-1 ms-3">
+                                <h5>Interface intuitive</h5>
+                                <p class="text-muted">Accessible aux débutants, puissant pour les experts</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-12">
+                        <div class="d-flex">
+                            <div class="flex-shrink-0">
+                                <i class="fas fa-code text-primary fs-4"></i>
+                            </div>
+                            <div class="flex-grow-1 ms-3">
+                                <h5>API REST complète</h5>
+                                <p class="text-muted">Intégration facile avec vos applications existantes</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6 text-center">
+                <div class="position-relative">
+                    <img src="https://via.placeholder.com/500x400/3498db/ffffff?text=Dashboard+Analytics" 
+                         alt="Dashboard Preview" class="img-fluid rounded shadow">
+                    <div class="position-absolute top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center">
+                        <button class="btn btn-primary btn-lg" onclick="showDemo()">
+                            <i class="fas fa-play me-2"></i>
+                            Voir la Démo
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Formats supportés -->
+<div class="py-5">
+    <div class="container">
+        <div class="text-center mb-5">
+            <h2 class="display-6 fw-bold text-primary">
+                Formats de Données Supportés
+            </h2>
+            <p class="lead text-muted">
+                Travaillez avec tous vos formats de données préférés
+            </p>
+        </div>
+        
+        <div class="row text-center">
+            <div class="col-md-2 col-6 mb-4">
+                <div class="card border-0">
+                    <div class="card-body">
+                        <i class="fas fa-file-csv fa-3x text-success mb-3"></i>
+                        <h6>CSV</h6>
+                        <small class="text-muted">Comma Separated Values</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-2 col-6 mb-4">
+                <div class="card border-0">
+                    <div class="card-body">
+                        <i class="fas fa-file-excel fa-3x text-primary mb-3"></i>
+                        <h6>Excel</h6>
+                        <small class="text-muted">.xlsx, .xls</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-2 col-6 mb-4">
+                <div class="card border-0">
+                    <div class="card-body">
+                        <i class="fas fa-file-code fa-3x text-info mb-3"></i>
+                        <h6>JSON</h6>
+                        <small class="text-muted">JavaScript Object Notation</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-2 col-6 mb-4">
+                <div class="card border-0">
+                    <div class="card-body">
+                        <i class="fas fa-file-alt fa-3x text-warning mb-3"></i>
+                        <h6>TSV</h6>
+                        <small class="text-muted">Tab Separated Values</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-2 col-6 mb-4">
+                <div class="card border-0">
+                    <div class="card-body">
+                        <i class="fas fa-database fa-3x text-danger mb-3"></i>
+                        <h6>SQL</h6>
+                        <small class="text-muted">Base de données</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-2 col-6 mb-4">
+                <div class="card border-0">
+                    <div class="card-body">
+                        <i class="fas fa-cloud fa-3x text-secondary mb-3"></i>
+                        <h6>Cloud</h6>
+                        <small class="text-muted">AWS, Google Cloud</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Processus en 3 étapes -->
+<div class="py-5 bg-primary text-white">
+    <div class="container">
+        <div class="text-center mb-5">
+            <h2 class="display-6 fw-bold">
+                Nettoyez vos données en 3 étapes simples
+            </h2>
+            <p class="lead opacity-75">
+                Un processus optimisé pour des résultats rapides et fiables
+            </p>
+        </div>
+        
+        <div class="row">
+            <div class="col-md-4 text-center mb-4">
+                <div class="position-relative">
+                    <div class="bg-white text-primary rounded-circle d-inline-flex align-items-center justify-content-center"
+                         style="width: 80px; height: 80px; font-size: 2rem; font-weight: bold;">
+                        1
+                    </div>
+                    <h4 class="mt-3">Uploadez vos données</h4>
+                    <p class="opacity-75">
+                        Glissez-déposez vos fichiers ou connectez-vous à vos sources de données
+                    </p>
+                </div>
+            </div>
+            <div class="col-md-4 text-center mb-4">
+                <div class="position-relative">
+                    <div class="bg-white text-primary rounded-circle d-inline-flex align-items-center justify-content-center"
+                         style="width: 80px; height: 80px; font-size: 2rem; font-weight: bold;">
+                        2
+                    </div>
+                    <h4 class="mt-3">Configuration automatique</h4>
+                    <p class="opacity-75">
+                        L'IA analyse vos données et configure automatiquement les paramètres optimaux
+                    </p>
+                </div>
+            </div>
+            <div class="col-md-4 text-center mb-4">
+                <div class="position-relative">
+                    <div class="bg-white text-primary rounded-circle d-inline-flex align-items-center justify-content-center"
+                         style="width: 80px; height: 80px; font-size: 2rem; font-weight: bold;">
+                        3
+                    </div>
+                    <h4 class="mt-3">Résultats et insights</h4>
+                    <p class="opacity-75">
+                        Obtenez des données nettoyées et des analyses approfondies en quelques minutes
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Témoignages -->
+<div class="py-5">
+    <div class="container">
+        <div class="text-center mb-5">
+            <h2 class="display-6 fw-bold text-primary">
+                Ce que disent nos utilisateurs
+            </h2>
+            <p class="lead text-muted">
+                Rejoignez des milliers de professionnels qui nous font confiance
+            </p>
+        </div>
+        
+        <div class="row">
+            <div class="col-md-4 mb-4">
+                <div class="card h-100 border-0 shadow">
+                    <div class="card-body text-center">
+                        <div class="mb-3">
+                            <i class="fas fa-quote-left fa-2x text-primary opacity-50"></i>
+                        </div>
+                        <p class="card-text">
+                            "DataCleaner-Pro a révolutionné notre workflow de données. 
+                            Ce qui prenait des heures se fait maintenant en minutes."
+                        </p>
+                        <div class="d-flex align-items-center justify-content-center">
+                            <img src="https://via.placeholder.com/50/007bff/ffffff?text=M" 
+                                 class="rounded-circle me-3" alt="Marie L.">
+                            <div>
+                                <h6 class="mb-0">Marie Leroux</h6>
+                                <small class="text-muted">Data Scientist, TechCorp</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4 mb-4">
+                <div class="card h-100 border-0 shadow">
+                    <div class="card-body text-center">
+                        <div class="mb-3">
+                            <i class="fas fa-quote-left fa-2x text-primary opacity-50"></i>
+                        </div>
+                        <p class="card-text">
+                            "L'interface est intuitive et les analyses automatiques 
+                            nous font gagner un temps précieux sur nos projets."
+                        </p>
+                        <div class="d-flex align-items-center justify-content-center">
+                            <img src="https://via.placeholder.com/50/28a745/ffffff?text=J" 
+                                 class="rounded-circle me-3" alt="Jean M.">
+                            <div>
+                                <h6 class="mb-0">Jean Martin</h6>
+                                <small class="text-muted">Analyste, StartupInc</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4 mb-4">
+                <div class="card h-100 border-0 shadow">
+                    <div class="card-body text-center">
+                        <div class="mb-3">
+                            <i class="fas fa-quote-left fa-2x text-primary opacity-50"></i>
+                        </div>
+                        <p class="card-text">
+                            "La qualité du nettoyage automatique est impressionnante. 
+                            Nos données n'ont jamais été aussi propres."
+                        </p>
+                        <div class="d-flex align-items-center justify-content-center">
+                            <img src="https://via.placeholder.com/50/dc3545/ffffff?text=S" 
+                                 class="rounded-circle me-3" alt="Sophie D.">
+                            <div>
+                                <h6 class="mb-0">Sophie Durand</h6>
+                                <small class="text-muted">Chef de Projet, DataLab</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Pricing -->
+<div class="py-5 bg-light">
+    <div class="container">
+        <div class="text-center mb-5">
+            <h2 class="display-6 fw-bold text-primary">
+                Choisissez votre forfait
+            </h2>
+            <p class="lead text-muted">
+                Des plans adaptés à tous vos besoins, de l'individuel à l'entreprise
+            </p>
+        </div>
+        
+        <div class="row justify-content-center">
+            <div class="col-md-4 mb-4">
+                <div class="card h-100 border-0 shadow">
+                    <div class="card-body text-center p-4">
+                        <h5 class="card-title text-primary">Gratuit</h5>
+                        <h2 class="fw-bold">0€<small class="text-muted">/mois</small></h2>
+                        <ul class="list-unstyled mt-4 mb-4">
+                            <li><i class="fas fa-check text-success me-2"></i>1GB de stockage</li>
+                            <li><i class="fas fa-check text-success me-2"></i>5 datasets/mois</li>
+                            <li><i class="fas fa-check text-success me-2"></i>Analyses de base</li>
+                            <li><i class="fas fa-check text-success me-2"></i>Support communauté</li>
+                        </ul>
+                        <a href="{{ url_for('auth.register') }}" class="btn btn-outline-primary btn-lg w-100">
+                            Commencer
+                        </a>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4 mb-4">
+                <div class="card h-100 border-primary shadow">
+                    <div class="card-header text-center bg-primary text-white">
+                        <span class="badge bg-warning text-dark">Populaire</span>
+                    </div>
+                    <div class="card-body text-center p-4">
+                        <h5 class="card-title text-primary">Pro</h5>
+                        <h2 class="fw-bold">29€<small class="text-muted">/mois</small></h2>
+                        <ul class="list-unstyled mt-4 mb-4">
+                            <li><i class="fas fa-check text-success me-2"></i>100GB de stockage</li>
+                            <li><i class="fas fa-check text-success me-2"></i>Datasets illimités</li>
+                            <li><i class="fas fa-check text-success me-2"></i>ML avancé</li>
+                            <li><i class="fas fa-check text-success me-2"></i>API complète</li>
+                            <li><i class="fas fa-check text-success me-2"></i>Support prioritaire</li>
+                        </ul>
+                        <a href="{{ url_for('auth.register') }}" class="btn btn-primary btn-lg w-100">
+                            Essai gratuit 14j
+                        </a>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4 mb-4">
+                <div class="card h-100 border-0 shadow">
+                    <div class="card-body text-center p-4">
+                        <h5 class="card-title text-primary">Enterprise</h5>
+                        <h2 class="fw-bold">Sur mesure</h2>
+                        <ul class="list-unstyled mt-4 mb-4">
+                            <li><i class="fas fa-check text-success me-2"></i>Stockage illimité</li>
+                            <li><i class="fas fa-check text-success me-2"></i>Déploiement privé</li>
+                            <li><i class="fas fa-check text-success me-2"></i>SLA garanti</li>
+                            <li><i class="fas fa-check text-success me-2"></i>Support dédié</li>
+                            <li><i class="fas fa-check text-success me-2"></i>Formation équipe</li>
+                        </ul>
+                        <a href="#" class="btn btn-outline-primary btn-lg w-100">
+                            Nous contacter
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Call to Action -->
+<div class="py-5 bg-primary text-white text-center">
+    <div class="container">
+        <h2 class="display-6 fw-bold mb-4">Prêt à transformer vos données ?</h2>
+        <p class="lead mb-4">Rejoignez les milliers d'analystes qui font confiance à DataCleaner-Pro</p>
+        <a href="{{ url_for('auth.register') }}" class="btn btn-light btn-lg">
+            <i class="fas fa-user-plus me-2"></i>
+            Créer un compte gratuit
+        </a>
+    </div>
+</div>
+
+<!-- Modal Démo -->
+<div class="modal fade" id="demoModal" tabindex="-1">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Démo DataCleaner-Pro</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="ratio ratio-16x9">
+                    <iframe src="https://www.youtube.com/embed/dQw4w9WgXcQ" 
+                            title="DataCleaner-Pro Demo" allowfullscreen></iframe>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function showDemo() {
+    var myModal = new bootstrap.Modal(document.getElementById('demoModal'));
+    myModal.show();
+}
+
+// Animation au scroll
+document.addEventListener('DOMContentLoaded', function() {
+    const observerOptions = {
+        threshold: 0.1,
+        rootMargin: '0px 0px -50px 0px'
+    };
+    
+    const observer = new IntersectionObserver(function(entries) {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                entry.target.classList.add('animate-in');
+            }
+        });
+    }, observerOptions);
+    
+    document.querySelectorAll('.card, .feature-icon').forEach(el => {
+        observer.observe(el);
+    });
+});
+</script>
+
+<style>
+.animate-in {
+    animation: fadeInUp 0.8s ease forwards;
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+</style>
+{% endblock %}

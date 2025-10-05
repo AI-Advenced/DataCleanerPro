@@ -1,0 +1,883 @@
+{% extends "base.html" %}
+
+{% block title %}Pipeline ETL - DataCleaner Pro{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">
+        <i class="fas fa-cogs me-2"></i>
+        Pipeline ETL
+    </h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <div class="btn-group me-2">
+            <button class="btn btn-sm btn-primary" id="newPipelineBtn">
+                <i class="fas fa-plus"></i> Nouveau Pipeline
+            </button>
+            <button class="btn btn-sm btn-success" id="runAllPipelinesBtn">
+                <i class="fas fa-play"></i> Exécuter Tous
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Statistiques ETL -->
+<div class="row mb-4">
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-primary shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
+                            Pipelines Actifs
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">{{ pipelines|length }}</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-project-diagram fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-success shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                            Exécutions Réussies
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">156</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-check-circle fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-info shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
+                            Données Traitées
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">2.4 GB</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-database fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-warning shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
+                            Temps d'Exécution Moyen
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">3.2 min</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-clock fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Créateur de Pipeline -->
+<div class="row mb-4">
+    <div class="col-lg-4">
+        <div class="card shadow">
+            <div class="card-header">
+                <h6 class="m-0 font-weight-bold text-primary">
+                    <i class="fas fa-plus-circle me-2"></i>
+                    Créer un Pipeline ETL
+                </h6>
+            </div>
+            <div class="card-body">
+                <form id="pipelineForm">
+                    <div class="mb-3">
+                        <label class="form-label">Nom du Pipeline</label>
+                        <input type="text" class="form-control" id="pipelineName" 
+                               placeholder="Ex: Import quotidien ventes">
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Description</label>
+                        <textarea class="form-control" id="pipelineDescription" rows="2" 
+                                  placeholder="Description du pipeline..."></textarea>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Source de Données</label>
+                        <select class="form-select" id="sourceType">
+                            <option value="">Sélectionner une source...</option>
+                            <option value="file">Fichier Local</option>
+                            <option value="database">Base de Données</option>
+                            <option value="api">API REST</option>
+                            <option value="ftp">Serveur FTP/SFTP</option>
+                            <option value="cloud">Cloud Storage</option>
+                            <option value="stream">Stream en Temps Réel</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3" id="sourceConfig" style="display: none;">
+                        <label class="form-label">Configuration Source</label>
+                        <textarea class="form-control" id="sourceConfigText" rows="3" 
+                                  placeholder="Configuration JSON..."></textarea>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Fréquence d'Exécution</label>
+                        <select class="form-select" id="scheduleType">
+                            <option value="manual">Manuel</option>
+                            <option value="hourly">Toutes les heures</option>
+                            <option value="daily">Quotidien</option>
+                            <option value="weekly">Hebdomadaire</option>
+                            <option value="monthly">Mensuel</option>
+                            <option value="cron">Expression Cron</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3" id="cronConfig" style="display: none;">
+                        <label class="form-label">Expression Cron</label>
+                        <input type="text" class="form-control" id="cronExpression" 
+                               placeholder="0 0 * * * (minuit chaque jour)">
+                        <small class="form-text text-muted">Format: min hour day month weekday</small>
+                    </div>
+
+                    <button type="button" class="btn btn-primary w-100" id="createPipelineBtn">
+                        <i class="fas fa-plus me-2"></i>
+                        Créer Pipeline
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Templates de Pipeline -->
+        <div class="card shadow mt-4">
+            <div class="card-header">
+                <h6 class="m-0 font-weight-bold text-success">
+                    <i class="fas fa-templates me-2"></i>
+                    Templates ETL
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <button class="btn btn-outline-primary btn-sm text-start" onclick="loadETLTemplate('csv_import')">
+                        <i class="fas fa-file-csv me-2"></i>
+                        <strong>Import CSV</strong><br>
+                        <small class="text-muted">Import et transformation de fichiers CSV</small>
+                    </button>
+                    <button class="btn btn-outline-success btn-sm text-start" onclick="loadETLTemplate('api_sync')">
+                        <i class="fas fa-sync-alt me-2"></i>
+                        <strong>Sync API</strong><br>
+                        <small class="text-muted">Synchronisation avec API externe</small>
+                    </button>
+                    <button class="btn btn-outline-info btn-sm text-start" onclick="loadETLTemplate('db_migration')">
+                        <i class="fas fa-database me-2"></i>
+                        <strong>Migration DB</strong><br>
+                        <small class="text-muted">Migration entre bases de données</small>
+                    </button>
+                    <button class="btn btn-outline-warning btn-sm text-start" onclick="loadETLTemplate('real_time')">
+                        <i class="fas fa-stream me-2"></i>
+                        <strong>Temps Réel</strong><br>
+                        <small class="text-muted">Traitement de flux en temps réel</small>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-8">
+        <div class="card shadow">
+            <div class="card-header">
+                <h6 class="m-0 font-weight-bold text-primary">
+                    <i class="fas fa-sitemap me-2"></i>
+                    Concepteur de Pipeline Visuel
+                </h6>
+            </div>
+            <div class="card-body">
+                <div id="pipelineCanvas" style="height: 400px; background: #f8f9fa; border: 2px dashed #dee2e6; border-radius: 10px; position: relative;">
+                    <div class="text-center pt-5">
+                        <i class="fas fa-project-diagram fa-3x text-muted mb-3"></i>
+                        <h5 class="text-muted">Concepteur Visuel de Pipeline</h5>
+                        <p class="text-muted">Glissez-déposez les composants pour créer votre pipeline ETL</p>
+                    </div>
+                    
+                    <!-- Composants ETL -->
+                    <div class="pipeline-components" style="position: absolute; top: 10px; left: 10px;">
+                        <div class="component-palette bg-white p-2 rounded shadow-sm" style="width: 200px;">
+                            <h6><i class="fas fa-tools me-2"></i>Composants</h6>
+                            <div class="d-grid gap-1">
+                                <button class="btn btn-sm btn-outline-primary component-btn" data-component="extract">
+                                    <i class="fas fa-download me-1"></i> Extract
+                                </button>
+                                <button class="btn btn-sm btn-outline-info component-btn" data-component="transform">
+                                    <i class="fas fa-exchange-alt me-1"></i> Transform
+                                </button>
+                                <button class="btn btn-sm btn-outline-success component-btn" data-component="load">
+                                    <i class="fas fa-upload me-1"></i> Load
+                                </button>
+                                <button class="btn btn-sm btn-outline-warning component-btn" data-component="validate">
+                                    <i class="fas fa-check me-1"></i> Validate
+                                </button>
+                                <button class="btn btn-sm btn-outline-secondary component-btn" data-component="filter">
+                                    <i class="fas fa-filter me-1"></i> Filter
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Liste des Pipelines -->
+<div class="row">
+    <div class="col-lg-12">
+        <div class="card shadow">
+            <div class="card-header">
+                <h6 class="m-0 font-weight-bold text-primary">
+                    <i class="fas fa-list me-2"></i>
+                    Pipelines Existants
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Pipeline</th>
+                                <th>Type</th>
+                                <th>Statut</th>
+                                <th>Dernière Exécution</th>
+                                <th>Prochaine Exécution</th>
+                                <th>Succès/Échec</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="pipelinesList">
+                            <!-- Exemple de pipelines -->
+                            <tr>
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        <i class="fas fa-file-csv fa-2x text-primary me-3"></i>
+                                        <div>
+                                            <strong>Import Ventes CSV</strong><br>
+                                            <small class="text-muted">Import quotidien des données de ventes</small>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td><span class="badge bg-primary">ETL</span></td>
+                                <td>
+                                    <span class="badge bg-success">
+                                        <i class="fas fa-check me-1"></i>Actif
+                                    </span>
+                                </td>
+                                <td>
+                                    <small>01/12/2024 09:00</small><br>
+                                    <span class="text-success"><i class="fas fa-check me-1"></i>Succès</span>
+                                </td>
+                                <td>
+                                    <small>02/12/2024 09:00</small><br>
+                                    <span class="text-muted">Dans 14h</span>
+                                </td>
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        <div class="progress me-2" style="width: 60px; height: 8px;">
+                                            <div class="progress-bar bg-success" style="width: 95%"></div>
+                                        </div>
+                                        <small>95%</small>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="btn-group btn-group-sm">
+                                        <button class="btn btn-outline-success btn-sm" onclick="runPipeline(1)" title="Exécuter">
+                                            <i class="fas fa-play"></i>
+                                        </button>
+                                        <button class="btn btn-outline-info btn-sm" onclick="viewPipelineLogs(1)" title="Logs">
+                                            <i class="fas fa-list-alt"></i>
+                                        </button>
+                                        <button class="btn btn-outline-warning btn-sm" onclick="editPipeline(1)" title="Modifier">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <button class="btn btn-outline-secondary btn-sm" onclick="pausePipeline(1)" title="Pause">
+                                            <i class="fas fa-pause"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        <i class="fas fa-sync-alt fa-2x text-success me-3"></i>
+                                        <div>
+                                            <strong>Sync API CRM</strong><br>
+                                            <small class="text-muted">Synchronisation avec l'API Salesforce</small>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td><span class="badge bg-info">API</span></td>
+                                <td>
+                                    <span class="badge bg-warning">
+                                        <i class="fas fa-spinner fa-spin me-1"></i>En cours
+                                    </span>
+                                </td>
+                                <td>
+                                    <small>01/12/2024 15:30</small><br>
+                                    <span class="text-warning"><i class="fas fa-spinner fa-spin me-1"></i>En cours</span>
+                                </td>
+                                <td>
+                                    <small>01/12/2024 16:30</small><br>
+                                    <span class="text-muted">Dans 30min</span>
+                                </td>
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        <div class="progress me-2" style="width: 60px; height: 8px;">
+                                            <div class="progress-bar bg-info" style="width: 88%"></div>
+                                        </div>
+                                        <small>88%</small>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="btn-group btn-group-sm">
+                                        <button class="btn btn-outline-danger btn-sm" onclick="stopPipeline(2)" title="Arrêter">
+                                            <i class="fas fa-stop"></i>
+                                        </button>
+                                        <button class="btn btn-outline-info btn-sm" onclick="viewPipelineLogs(2)" title="Logs">
+                                            <i class="fas fa-list-alt"></i>
+                                        </button>
+                                        <button class="btn btn-outline-warning btn-sm" onclick="editPipeline(2)" title="Modifier">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        <i class="fas fa-database fa-2x text-info me-3"></i>
+                                        <div>
+                                            <strong>Migration Produits</strong><br>
+                                            <small class="text-muted">Migration des données produits vers DW</small>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td><span class="badge bg-secondary">ETL</span></td>
+                                <td>
+                                    <span class="badge bg-secondary">
+                                        <i class="fas fa-pause me-1"></i>Suspendu
+                                    </span>
+                                </td>
+                                <td>
+                                    <small>30/11/2024 22:00</small><br>
+                                    <span class="text-danger"><i class="fas fa-times me-1"></i>Échec</span>
+                                </td>
+                                <td>
+                                    <small>-</small><br>
+                                    <span class="text-muted">Suspendu</span>
+                                </td>
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        <div class="progress me-2" style="width: 60px; height: 8px;">
+                                            <div class="progress-bar bg-danger" style="width: 72%"></div>
+                                        </div>
+                                        <small>72%</small>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="btn-group btn-group-sm">
+                                        <button class="btn btn-outline-success btn-sm" onclick="resumePipeline(3)" title="Reprendre">
+                                            <i class="fas fa-play"></i>
+                                        </button>
+                                        <button class="btn btn-outline-info btn-sm" onclick="viewPipelineLogs(3)" title="Logs">
+                                            <i class="fas fa-list-alt"></i>
+                                        </button>
+                                        <button class="btn btn-outline-warning btn-sm" onclick="editPipeline(3)" title="Modifier">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <button class="btn btn-outline-danger btn-sm" onclick="deletePipeline(3)" title="Supprimer">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal d'Exécution de Pipeline -->
+<div class="modal fade" id="pipelineExecutionModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-cogs me-2"></i>
+                    Exécution Pipeline ETL
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="pipeline-execution-status">
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <h6><i class="fas fa-info-circle text-primary me-2"></i>Informations</h6>
+                            <p><strong>Pipeline:</strong> <span id="execPipelineName">-</span></p>
+                            <p><strong>Démarré:</strong> <span id="execStartTime">-</span></p>
+                            <p><strong>Durée:</strong> <span id="execDuration">-</span></p>
+                        </div>
+                        <div class="col-md-6">
+                            <h6><i class="fas fa-chart-pie text-success me-2"></i>Progression</h6>
+                            <div class="progress mb-2">
+                                <div class="progress-bar progress-bar-striped progress-bar-animated" 
+                                     id="execProgressBar" style="width: 0%"></div>
+                            </div>
+                            <p class="text-center"><span id="execProgressText">0%</span></p>
+                        </div>
+                    </div>
+                    
+                    <div class="pipeline-steps">
+                        <h6><i class="fas fa-list me-2"></i>Étapes du Pipeline</h6>
+                        <div class="list-group" id="pipelineSteps">
+                            <!-- Steps will be populated by JavaScript -->
+                        </div>
+                    </div>
+                    
+                    <div class="mt-4">
+                        <h6><i class="fas fa-terminal me-2"></i>Logs en Temps Réel</h6>
+                        <div id="executionLogs" class="bg-dark text-light p-3 rounded" 
+                             style="height: 200px; overflow-y: auto; font-family: monospace; font-size: 0.9em;">
+                            <div class="log-entry">[2024-12-01 15:30:00] Pipeline démarré...</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-danger" id="stopExecutionBtn">
+                    <i class="fas fa-stop me-2"></i>Arrêter
+                </button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    Fermer
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const sourceTypeSelect = document.getElementById('sourceType');
+    const sourceConfigDiv = document.getElementById('sourceConfig');
+    const scheduleTypeSelect = document.getElementById('scheduleType');
+    const cronConfigDiv = document.getElementById('cronConfig');
+    
+    // Afficher/masquer la configuration source
+    sourceTypeSelect?.addEventListener('change', function() {
+        if (this.value) {
+            sourceConfigDiv.style.display = 'block';
+            updateSourceConfig(this.value);
+        } else {
+            sourceConfigDiv.style.display = 'none';
+        }
+    });
+    
+    // Afficher/masquer la configuration cron
+    scheduleTypeSelect?.addEventListener('change', function() {
+        cronConfigDiv.style.display = this.value === 'cron' ? 'block' : 'none';
+    });
+    
+    // Créer un nouveau pipeline
+    document.getElementById('createPipelineBtn')?.addEventListener('click', createPipeline);
+    
+    // Initialiser le concepteur visuel
+    initializePipelineCanvas();
+});
+
+function updateSourceConfig(sourceType) {
+    const configs = {
+        file: '{\n  "path": "/data/import/",\n  "pattern": "*.csv",\n  "encoding": "utf-8"\n}',
+        database: '{\n  "host": "localhost",\n  "port": 5432,\n  "database": "prod_db",\n  "table": "sales"\n}',
+        api: '{\n  "url": "https://api.example.com/data",\n  "method": "GET",\n  "headers": {"Authorization": "Bearer token"}\n}',
+        ftp: '{\n  "host": "ftp.example.com",\n  "username": "user",\n  "remote_path": "/data/"\n}',
+        cloud: '{\n  "provider": "aws",\n  "bucket": "my-bucket",\n  "prefix": "data/"\n}',
+        stream: '{\n  "type": "kafka",\n  "servers": "localhost:9092",\n  "topic": "events"\n}'
+    };
+    
+    document.getElementById('sourceConfigText').value = configs[sourceType] || '';
+}
+
+function createPipeline() {
+    const pipelineData = {
+        name: document.getElementById('pipelineName').value,
+        description: document.getElementById('pipelineDescription').value,
+        source_type: document.getElementById('sourceType').value,
+        source_config: document.getElementById('sourceConfigText').value,
+        schedule_type: document.getElementById('scheduleType').value,
+        cron_expression: document.getElementById('cronExpression').value
+    };
+    
+    if (!pipelineData.name || !pipelineData.source_type) {
+        alert('Veuillez remplir tous les champs requis');
+        return;
+    }
+    
+    // Simuler la création
+    console.log('Création du pipeline:', pipelineData);
+    alert('Pipeline créé avec succès !');
+    
+    // Réinitialiser le formulaire
+    document.getElementById('pipelineForm').reset();
+    document.getElementById('sourceConfig').style.display = 'none';
+    document.getElementById('cronConfig').style.display = 'none';
+    
+    // Actualiser la liste (simulation)
+    addPipelineToList(pipelineData);
+}
+
+function addPipelineToList(pipelineData) {
+    const tbody = document.getElementById('pipelinesList');
+    const newRow = document.createElement('tr');
+    
+    newRow.innerHTML = `
+        <td>
+            <div class="d-flex align-items-center">
+                <i class="fas fa-cogs fa-2x text-primary me-3"></i>
+                <div>
+                    <strong>${pipelineData.name}</strong><br>
+                    <small class="text-muted">${pipelineData.description}</small>
+                </div>
+            </div>
+        </td>
+        <td><span class="badge bg-secondary">ETL</span></td>
+        <td>
+            <span class="badge bg-warning">
+                <i class="fas fa-clock me-1"></i>Nouveau
+            </span>
+        </td>
+        <td>
+            <small>-</small><br>
+            <span class="text-muted">Pas encore exécuté</span>
+        </td>
+        <td>
+            <small>-</small><br>
+            <span class="text-muted">À planifier</span>
+        </td>
+        <td>
+            <div class="d-flex align-items-center">
+                <div class="progress me-2" style="width: 60px; height: 8px;">
+                    <div class="progress-bar bg-secondary" style="width: 0%"></div>
+                </div>
+                <small>N/A</small>
+            </div>
+        </td>
+        <td>
+            <div class="btn-group btn-group-sm">
+                <button class="btn btn-outline-success btn-sm" onclick="runPipeline(999)" title="Exécuter">
+                    <i class="fas fa-play"></i>
+                </button>
+                <button class="btn btn-outline-warning btn-sm" onclick="editPipeline(999)" title="Modifier">
+                    <i class="fas fa-edit"></i>
+                </button>
+            </div>
+        </td>
+    `;
+    
+    tbody.insertBefore(newRow, tbody.firstChild);
+}
+
+function loadETLTemplate(templateType) {
+    const templates = {
+        csv_import: {
+            name: 'Import CSV Quotidien',
+            description: 'Import automatique des fichiers CSV avec validation et transformation',
+            source_type: 'file',
+            schedule_type: 'daily'
+        },
+        api_sync: {
+            name: 'Synchronisation API',
+            description: 'Synchronisation bidirectionnelle avec API externe',
+            source_type: 'api',
+            schedule_type: 'hourly'
+        },
+        db_migration: {
+            name: 'Migration Base de Données',
+            description: 'Migration de données entre bases avec transformation',
+            source_type: 'database',
+            schedule_type: 'weekly'
+        },
+        real_time: {
+            name: 'Traitement Temps Réel',
+            description: 'Traitement de flux de données en temps réel',
+            source_type: 'stream',
+            schedule_type: 'manual'
+        }
+    };
+    
+    const template = templates[templateType];
+    if (template) {
+        document.getElementById('pipelineName').value = template.name;
+        document.getElementById('pipelineDescription').value = template.description;
+        document.getElementById('sourceType').value = template.source_type;
+        document.getElementById('scheduleType').value = template.schedule_type;
+        
+        // Déclencher les événements pour mettre à jour l'UI
+        document.getElementById('sourceType').dispatchEvent(new Event('change'));
+        document.getElementById('scheduleType').dispatchEvent(new Event('change'));
+    }
+}
+
+function initializePipelineCanvas() {
+    const canvas = document.getElementById('pipelineCanvas');
+    const componentBtns = document.querySelectorAll('.component-btn');
+    
+    // Ajouter des événements drag & drop
+    componentBtns.forEach(btn => {
+        btn.addEventListener('dragstart', function(e) {
+            e.dataTransfer.setData('text/plain', this.dataset.component);
+        });
+        btn.draggable = true;
+    });
+    
+    canvas.addEventListener('dragover', function(e) {
+        e.preventDefault();
+    });
+    
+    canvas.addEventListener('drop', function(e) {
+        e.preventDefault();
+        const componentType = e.dataTransfer.getData('text/plain');
+        addComponentToCanvas(componentType, e.offsetX, e.offsetY);
+    });
+}
+
+function addComponentToCanvas(componentType, x, y) {
+    const canvas = document.getElementById('pipelineCanvas');
+    const component = document.createElement('div');
+    
+    const componentConfig = {
+        extract: { icon: 'fas fa-download', color: 'primary', name: 'Extract' },
+        transform: { icon: 'fas fa-exchange-alt', color: 'info', name: 'Transform' },
+        load: { icon: 'fas fa-upload', color: 'success', name: 'Load' },
+        validate: { icon: 'fas fa-check', color: 'warning', name: 'Validate' },
+        filter: { icon: 'fas fa-filter', color: 'secondary', name: 'Filter' }
+    };
+    
+    const config = componentConfig[componentType];
+    
+    component.className = 'pipeline-component bg-white border rounded p-2 shadow-sm';
+    component.style.cssText = `
+        position: absolute;
+        left: ${x - 50}px;
+        top: ${y - 25}px;
+        width: 100px;
+        text-align: center;
+        cursor: move;
+        z-index: 10;
+    `;
+    
+    component.innerHTML = `
+        <i class="${config.icon} text-${config.color} mb-1"></i><br>
+        <small><strong>${config.name}</strong></small>
+        <button class="btn btn-sm btn-outline-danger position-absolute" 
+                style="top: -5px; right: -5px; width: 20px; height: 20px; padding: 0; font-size: 10px;"
+                onclick="this.parentElement.remove()">×</button>
+    `;
+    
+    // Rendre le composant déplaçable
+    makeDraggable(component);
+    
+    canvas.appendChild(component);
+}
+
+function makeDraggable(element) {
+    let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
+    
+    element.onmousedown = dragMouseDown;
+    
+    function dragMouseDown(e) {
+        e = e || window.event;
+        e.preventDefault();
+        pos3 = e.clientX;
+        pos4 = e.clientY;
+        document.onmouseup = closeDragElement;
+        document.onmousemove = elementDrag;
+    }
+    
+    function elementDrag(e) {
+        e = e || window.event;
+        e.preventDefault();
+        pos1 = pos3 - e.clientX;
+        pos2 = pos4 - e.clientY;
+        pos3 = e.clientX;
+        pos4 = e.clientY;
+        element.style.top = (element.offsetTop - pos2) + "px";
+        element.style.left = (element.offsetLeft - pos1) + "px";
+    }
+    
+    function closeDragElement() {
+        document.onmouseup = null;
+        document.onmousemove = null;
+    }
+}
+
+// Fonctions de gestion des pipelines
+function runPipeline(pipelineId) {
+    showPipelineExecution(pipelineId);
+}
+
+function showPipelineExecution(pipelineId) {
+    const modal = new bootstrap.Modal(document.getElementById('pipelineExecutionModal'));
+    
+    // Simuler les données du pipeline
+    document.getElementById('execPipelineName').textContent = `Pipeline #${pipelineId}`;
+    document.getElementById('execStartTime').textContent = new Date().toLocaleString();
+    document.getElementById('execDuration').textContent = '0s';
+    
+    // Réinitialiser la progression
+    document.getElementById('execProgressBar').style.width = '0%';
+    document.getElementById('execProgressText').textContent = '0%';
+    
+    // Simuler les étapes
+    const steps = [
+        { name: 'Extraction des données', status: 'pending' },
+        { name: 'Validation des données', status: 'pending' },
+        { name: 'Transformation', status: 'pending' },
+        { name: 'Chargement', status: 'pending' }
+    ];
+    
+    updatePipelineSteps(steps);
+    modal.show();
+    
+    // Simuler l'exécution
+    simulatePipelineExecution(steps);
+}
+
+function updatePipelineSteps(steps) {
+    const container = document.getElementById('pipelineSteps');
+    container.innerHTML = '';
+    
+    steps.forEach((step, index) => {
+        const stepElement = document.createElement('div');
+        stepElement.className = 'list-group-item d-flex justify-content-between align-items-center';
+        stepElement.id = `step-${index}`;
+        
+        let statusBadge = '';
+        if (step.status === 'completed') {
+            statusBadge = '<span class="badge bg-success"><i class="fas fa-check"></i></span>';
+        } else if (step.status === 'running') {
+            statusBadge = '<span class="badge bg-warning"><i class="fas fa-spinner fa-spin"></i></span>';
+        } else if (step.status === 'error') {
+            statusBadge = '<span class="badge bg-danger"><i class="fas fa-times"></i></span>';
+        } else {
+            statusBadge = '<span class="badge bg-secondary"><i class="fas fa-clock"></i></span>';
+        }
+        
+        stepElement.innerHTML = `
+            <span><i class="fas fa-cog me-2"></i>${step.name}</span>
+            ${statusBadge}
+        `;
+        
+        container.appendChild(stepElement);
+    });
+}
+
+function simulatePipelineExecution(steps) {
+    let currentStep = 0;
+    let progress = 0;
+    
+    function executeStep() {
+        if (currentStep >= steps.length) {
+            // Exécution terminée
+            document.getElementById('execProgressBar').style.width = '100%';
+            document.getElementById('execProgressText').textContent = '100%';
+            addLogEntry('[' + new Date().toLocaleTimeString() + '] Pipeline terminé avec succès!', 'success');
+            return;
+        }
+        
+        // Marquer l'étape comme en cours
+        steps[currentStep].status = 'running';
+        updatePipelineSteps(steps);
+        addLogEntry(`[${new Date().toLocaleTimeString()}] Démarrage: ${steps[currentStep].name}`, 'info');
+        
+        // Simuler l'exécution de l'étape
+        const stepDuration = Math.random() * 3000 + 1000; // 1-4 secondes
+        
+        setTimeout(() => {
+            // Marquer l'étape comme terminée
+            steps[currentStep].status = 'completed';
+            updatePipelineSteps(steps);
+            addLogEntry(`[${new Date().toLocaleTimeString()}] Terminé: ${steps[currentStep].name}`, 'success');
+            
+            // Mettre à jour la progression
+            progress = ((currentStep + 1) / steps.length) * 100;
+            document.getElementById('execProgressBar').style.width = progress + '%';
+            document.getElementById('execProgressText').textContent = Math.round(progress) + '%';
+            
+            currentStep++;
+            executeStep(); // Étape suivante
+        }, stepDuration);
+    }
+    
+    executeStep();
+}
+
+function addLogEntry(message, type = 'info') {
+    const logsContainer = document.getElementById('executionLogs');
+    const logEntry = document.createElement('div');
+    logEntry.className = 'log-entry';
+    
+    let color = 'text-light';
+    if (type === 'success') color = 'text-success';
+    else if (type === 'error') color = 'text-danger';
+    else if (type === 'warning') color = 'text-warning';
+    
+    logEntry.innerHTML = `<span class="${color}">${message}</span>`;
+    logsContainer.appendChild(logEntry);
+    logsContainer.scrollTop = logsContainer.scrollHeight;
+}
+
+function editPipeline(pipelineId) {
+    alert(`Édition du pipeline #${pipelineId}`);
+}
+
+function pausePipeline(pipelineId) {
+    alert(`Pipeline #${pipelineId} mis en pause`);
+}
+
+function stopPipeline(pipelineId) {
+    alert(`Pipeline #${pipelineId} arrêté`);
+}
+
+function resumePipeline(pipelineId) {
+    alert(`Pipeline #${pipelineId} repris`);
+}
+
+function deletePipeline(pipelineId) {
+    if (confirm('Êtes-vous sûr de vouloir supprimer ce pipeline ?')) {
+        alert(`Pipeline #${pipelineId} supprimé`);
+    }
+}
+
+function viewPipelineLogs(pipelineId) {
+    alert(`Affichage des logs du pipeline #${pipelineId}`);
+}
+</script>
+{% endblock %}

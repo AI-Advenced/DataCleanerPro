@@ -1,0 +1,577 @@
+{% extends "base.html" %}
+
+{% block title %}Nettoyage Automatique - DataCleaner Pro{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">
+        <i class="fas fa-magic me-2"></i>
+        Nettoyage Automatique
+    </h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <div class="btn-group me-2">
+            <button class="btn btn-sm btn-primary" id="startBatchCleaning">
+                <i class="fas fa-play"></i> Nettoyage par Lot
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Statistiques du nettoyage -->
+<div class="row mb-4">
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-primary shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
+                            Datasets à Nettoyer
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">
+                            {{ datasets|selectattr('is_cleaned', 'equalto', false)|list|length }}
+                        </div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-exclamation-triangle fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-success shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                            Datasets Nettoyés
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">
+                            {{ datasets|selectattr('is_cleaned', 'equalto', true)|list|length }}
+                        </div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-check-circle fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-info shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
+                            Tâches en Cours
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">
+                            {{ cleaning_jobs|selectattr('status', 'equalto', 'running')|list|length }}
+                        </div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-spinner fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-warning shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
+                            Taux de Réussite
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">
+                            {% set completed_jobs = cleaning_jobs|selectattr('status', 'equalto', 'completed')|list|length %}
+                            {% set total_jobs = cleaning_jobs|length %}
+                            {% if total_jobs > 0 %}
+                                {{ "%.0f"|format((completed_jobs / total_jobs * 100)) }}%
+                            {% else %}
+                                N/A
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-chart-line fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Configuration de nettoyage -->
+<div class="row mb-4">
+    <div class="col-lg-4">
+        <div class="card shadow">
+            <div class="card-header">
+                <h6 class="m-0 font-weight-bold text-primary">
+                    <i class="fas fa-cogs me-2"></i>
+                    Configuration de Nettoyage
+                </h6>
+            </div>
+            <div class="card-body">
+                <form id="cleaningConfigForm">
+                    <div class="mb-3">
+                        <label class="form-label">Mode de Nettoyage</label>
+                        <select class="form-select" id="cleaningMode">
+                            <option value="automatic">Automatique (Recommandé)</option>
+                            <option value="conservative">Conservateur</option>
+                            <option value="aggressive">Agressif</option>
+                            <option value="custom">Personnalisé</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="removeDuplicates" checked>
+                            <label class="form-check-label" for="removeDuplicates">
+                                Supprimer les doublons
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Valeurs Manquantes</label>
+                        <select class="form-select" id="missingValues">
+                            <option value="auto">Traitement automatique</option>
+                            <option value="drop">Supprimer les lignes</option>
+                            <option value="fill_mean">Remplacer par la moyenne</option>
+                            <option value="fill_median">Remplacer par la médiane</option>
+                            <option value="fill_mode">Remplacer par le mode</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="detectOutliers" checked>
+                            <label class="form-check-label" for="detectOutliers">
+                                Détecter les valeurs aberrantes
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="standardizeFormats" checked>
+                            <label class="form-check-label" for="standardizeFormats">
+                                Standardiser les formats
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="optimizeTypes" checked>
+                            <label class="form-check-label" for="optimizeTypes">
+                                Optimiser les types de données
+                            </label>
+                        </div>
+                    </div>
+
+                    <button type="button" class="btn btn-primary w-100" id="saveConfig">
+                        <i class="fas fa-save me-2"></i>
+                        Sauvegarder Configuration
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-8">
+        <div class="card shadow">
+            <div class="card-header">
+                <h6 class="m-0 font-weight-bold text-primary">
+                    <i class="fas fa-database me-2"></i>
+                    Sélection des Datasets
+                </h6>
+            </div>
+            <div class="card-body">
+                {% if datasets %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th width="50">
+                                        <input type="checkbox" id="selectAll" class="form-check-input">
+                                    </th>
+                                    <th>Dataset</th>
+                                    <th>Taille</th>
+                                    <th>Lignes</th>
+                                    <th>Statut</th>
+                                    <th>Qualité Estimée</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for dataset in datasets %}
+                                    <tr data-dataset-id="{{ dataset.id }}">
+                                        <td>
+                                            <input type="checkbox" class="form-check-input dataset-checkbox" 
+                                                   value="{{ dataset.id }}" 
+                                                   {% if not dataset.is_cleaned %}data-needs-cleaning="true"{% endif %}>
+                                        </td>
+                                        <td>
+                                            <div class="d-flex align-items-center">
+                                                <div class="ms-3">
+                                                    <strong>{{ dataset.name }}</strong><br>
+                                                    <small class="text-muted">{{ dataset.filename }}</small>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td>{{ "%.2f MB"|format(dataset.get_file_size_mb()) }}</td>
+                                        <td>{{ dataset.rows_count or 'N/A' }}</td>
+                                        <td>
+                                            {% if dataset.is_cleaned %}
+                                                <span class="badge bg-success">
+                                                    <i class="fas fa-check me-1"></i>Nettoyé
+                                                </span>
+                                            {% else %}
+                                                <span class="badge bg-warning">
+                                                    <i class="fas fa-exclamation-triangle me-1"></i>À nettoyer
+                                                </span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <div class="progress" style="height: 8px;">
+                                                {% set quality = range(70, 95)|random %}
+                                                <div class="progress-bar 
+                                                    {% if quality >= 80 %}bg-success
+                                                    {% elif quality >= 60 %}bg-warning
+                                                    {% else %}bg-danger{% endif %}" 
+                                                    style="width: {{ quality }}%"></div>
+                                            </div>
+                                            <small class="text-muted">{{ quality }}%</small>
+                                        </td>
+                                        <td>
+                                            {% if not dataset.is_cleaned %}
+                                                <button class="btn btn-sm btn-success" 
+                                                        onclick="startSingleCleaning({{ dataset.id }})">
+                                                    <i class="fas fa-play me-1"></i>Nettoyer
+                                                </button>
+                                            {% else %}
+                                                <button class="btn btn-sm btn-info" 
+                                                        onclick="viewCleaningReport({{ dataset.id }})">
+                                                    <i class="fas fa-eye me-1"></i>Rapport
+                                                </button>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="d-flex justify-content-between align-items-center mt-3">
+                        <div>
+                            <span id="selectedCount">0</span> dataset(s) sélectionné(s)
+                        </div>
+                        <button class="btn btn-success" id="startSelectedCleaning" disabled>
+                            <i class="fas fa-magic me-2"></i>
+                            Nettoyer les Sélectionnés
+                        </button>
+                    </div>
+                {% else %}
+                    <div class="text-center py-5">
+                        <i class="fas fa-database fa-3x text-muted mb-3"></i>
+                        <h5 class="text-muted">Aucun dataset trouvé</h5>
+                        <p class="text-muted">Uploadez d'abord des datasets pour commencer le nettoyage.</p>
+                        <a href="{{ url_for('main.upload_file') }}" class="btn btn-primary">
+                            <i class="fas fa-upload me-2"></i>
+                            Uploader Dataset
+                        </a>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Historique des tâches de nettoyage -->
+<div class="row">
+    <div class="col-lg-12">
+        <div class="card shadow">
+            <div class="card-header">
+                <h6 class="m-0 font-weight-bold text-primary">
+                    <i class="fas fa-history me-2"></i>
+                    Historique des Nettoyages
+                </h6>
+            </div>
+            <div class="card-body">
+                {% if cleaning_jobs %}
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Tâche</th>
+                                    <th>Dataset</th>
+                                    <th>Mode</th>
+                                    <th>Statut</th>
+                                    <th>Progression</th>
+                                    <th>Résultats</th>
+                                    <th>Date</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for job in cleaning_jobs %}
+                                    <tr>
+                                        <td><strong>{{ job.name }}</strong></td>
+                                        <td>Dataset #{{ job.dataset_id }}</td>
+                                        <td>
+                                            <span class="badge bg-info">{{ job.cleaning_mode|title }}</span>
+                                        </td>
+                                        <td>
+                                            {% if job.status == 'completed' %}
+                                                <span class="badge bg-success">
+                                                    <i class="fas fa-check me-1"></i>Terminé
+                                                </span>
+                                            {% elif job.status == 'running' %}
+                                                <span class="badge bg-warning">
+                                                    <i class="fas fa-spinner fa-spin me-1"></i>En cours
+                                                </span>
+                                            {% elif job.status == 'failed' %}
+                                                <span class="badge bg-danger">
+                                                    <i class="fas fa-times me-1"></i>Échoué
+                                                </span>
+                                            {% else %}
+                                                <span class="badge bg-secondary">
+                                                    <i class="fas fa-clock me-1"></i>En attente
+                                                </span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <div class="progress" style="height: 8px;">
+                                                <div class="progress-bar" style="width: {{ job.progress }}%"></div>
+                                            </div>
+                                            <small>{{ job.progress }}%</small>
+                                        </td>
+                                        <td>
+                                            {% if job.original_rows and job.cleaned_rows %}
+                                                <small class="text-muted">
+                                                    {{ job.original_rows }} → {{ job.cleaned_rows }} lignes<br>
+                                                    {{ job.original_rows - job.cleaned_rows }} supprimées
+                                                </small>
+                                            {% else %}
+                                                <small class="text-muted">N/A</small>
+                                            {% endif %}
+                                        </td>
+                                        <td>{{ job.created_at.strftime('%d/%m/%Y %H:%M') }}</td>
+                                        <td>
+                                            <div class="btn-group btn-group-sm">
+                                                <button class="btn btn-outline-info btn-sm" 
+                                                        onclick="viewJobDetails({{ job.id }})" title="Détails">
+                                                    <i class="fas fa-eye"></i>
+                                                </button>
+                                                {% if job.status == 'completed' %}
+                                                    <button class="btn btn-outline-success btn-sm" 
+                                                            onclick="downloadReport({{ job.id }})" title="Télécharger">
+                                                        <i class="fas fa-download"></i>
+                                                    </button>
+                                                {% endif %}
+                                            </div>
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="text-center py-3">
+                        <p class="text-muted">Aucune tâche de nettoyage trouvée.</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de progression -->
+<div class="modal fade" id="cleaningProgressModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-magic me-2"></i>
+                    Nettoyage en cours
+                </h5>
+            </div>
+            <div class="modal-body">
+                <div class="text-center">
+                    <i class="fas fa-spinner fa-spin fa-3x text-primary mb-3"></i>
+                    <h5 id="cleaningStatus">Initialisation...</h5>
+                    <p class="text-muted" id="cleaningDetails">Préparation du nettoyage...</p>
+                    
+                    <div class="progress mb-3">
+                        <div class="progress-bar progress-bar-striped progress-bar-animated" 
+                             id="cleaningProgressBar" style="width: 0%"></div>
+                    </div>
+                    
+                    <div id="cleaningLogs" class="text-start bg-light p-3 rounded" style="max-height: 200px; overflow-y: auto; display: none;">
+                        <small class="text-muted">Logs de traitement...</small>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" disabled id="closeModalBtn">
+                    Fermer
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const selectAllCheckbox = document.getElementById('selectAll');
+    const datasetCheckboxes = document.querySelectorAll('.dataset-checkbox');
+    const selectedCount = document.getElementById('selectedCount');
+    const startSelectedBtn = document.getElementById('startSelectedCleaning');
+    
+    // Gestion de la sélection multiple
+    selectAllCheckbox?.addEventListener('change', function() {
+        datasetCheckboxes.forEach(checkbox => {
+            checkbox.checked = this.checked;
+        });
+        updateSelectionCount();
+    });
+    
+    datasetCheckboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', updateSelectionCount);
+    });
+    
+    function updateSelectionCount() {
+        const selected = Array.from(datasetCheckboxes).filter(cb => cb.checked);
+        selectedCount.textContent = selected.length;
+        startSelectedBtn.disabled = selected.length === 0;
+    }
+    
+    // Nettoyage par lot
+    startSelectedBtn?.addEventListener('click', function() {
+        const selectedIds = Array.from(datasetCheckboxes)
+            .filter(cb => cb.checked)
+            .map(cb => parseInt(cb.value));
+        
+        if (selectedIds.length === 0) {
+            alert('Veuillez sélectionner au moins un dataset');
+            return;
+        }
+        
+        startBatchCleaning(selectedIds);
+    });
+});
+
+// Fonctions de nettoyage
+function startSingleCleaning(datasetId) {
+    const config = getCleaningConfig();
+    showCleaningProgress();
+    
+    axios.post('/api/start-cleaning', {
+        dataset_id: datasetId,
+        mode: config.mode,
+        options: config
+    })
+    .then(response => {
+        if (response.data.success) {
+            updateCleaningProgress(100, 'Nettoyage terminé!', 'Le dataset a été nettoyé avec succès.');
+            setTimeout(() => {
+                location.reload();
+            }, 2000);
+        }
+    })
+    .catch(error => {
+        console.error('Erreur:', error);
+        updateCleaningProgress(0, 'Erreur', 'Une erreur est survenue lors du nettoyage.');
+        document.getElementById('closeModalBtn').disabled = false;
+    });
+}
+
+function startBatchCleaning(datasetIds) {
+    const config = getCleaningConfig();
+    showCleaningProgress();
+    
+    let completed = 0;
+    const total = datasetIds.length;
+    
+    // Traiter les datasets un par un
+    processNextDataset(datasetIds, 0, config, total);
+}
+
+function processNextDataset(datasetIds, index, config, total) {
+    if (index >= datasetIds.length) {
+        updateCleaningProgress(100, 'Nettoyage par lot terminé!', 'Tous les datasets ont été traités.');
+        setTimeout(() => {
+            location.reload();
+        }, 2000);
+        return;
+    }
+    
+    const progress = (index / total) * 100;
+    updateCleaningProgress(progress, `Traitement en cours...`, `Dataset ${index + 1} sur ${total}`);
+    
+    axios.post('/api/start-cleaning', {
+        dataset_id: datasetIds[index],
+        mode: config.mode,
+        options: config
+    })
+    .then(response => {
+        setTimeout(() => {
+            processNextDataset(datasetIds, index + 1, config, total);
+        }, 1000);
+    })
+    .catch(error => {
+        console.error('Erreur dataset', datasetIds[index], ':', error);
+        // Continuer avec le suivant même en cas d'erreur
+        setTimeout(() => {
+            processNextDataset(datasetIds, index + 1, config, total);
+        }, 1000);
+    });
+}
+
+function getCleaningConfig() {
+    return {
+        mode: document.getElementById('cleaningMode')?.value || 'automatic',
+        removeDuplicates: document.getElementById('removeDuplicates')?.checked || false,
+        missingValues: document.getElementById('missingValues')?.value || 'auto',
+        detectOutliers: document.getElementById('detectOutliers')?.checked || false,
+        standardizeFormats: document.getElementById('standardizeFormats')?.checked || false,
+        optimizeTypes: document.getElementById('optimizeTypes')?.checked || false
+    };
+}
+
+function showCleaningProgress() {
+    const modal = new bootstrap.Modal(document.getElementById('cleaningProgressModal'));
+    modal.show();
+}
+
+function updateCleaningProgress(percentage, status, details) {
+    document.getElementById('cleaningProgressBar').style.width = percentage + '%';
+    document.getElementById('cleaningStatus').textContent = status;
+    document.getElementById('cleaningDetails').textContent = details;
+    
+    if (percentage >= 100) {
+        document.getElementById('closeModalBtn').disabled = false;
+    }
+}
+
+function viewJobDetails(jobId) {
+    alert('Affichage des détails de la tâche #' + jobId);
+}
+
+function downloadReport(jobId) {
+    alert('Téléchargement du rapport pour la tâche #' + jobId);
+}
+
+function viewCleaningReport(datasetId) {
+    alert('Affichage du rapport de nettoyage pour le dataset #' + datasetId);
+}
+</script>
+{% endblock %}

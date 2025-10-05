@@ -1,0 +1,656 @@
+{% extends "base.html" %}
+
+{% block title %}{{ dataset.name }} - DataCleaner-Pro{% endblock %}
+
+{% block guest_content %}
+<!-- En-tête du dataset -->
+<div class="row mb-4">
+    <div class="col-md-8">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{{ url_for('main.list_datasets') }}">Datasets</a></li>
+                <li class="breadcrumb-item active">{{ dataset.name }}</li>
+            </ol>
+        </nav>
+        
+        <div class="d-flex align-items-center mb-3">
+            {% if dataset.file_type == 'csv' %}
+                <i class="fas fa-file-csv text-success me-3 fs-1"></i>
+            {% elif dataset.file_type in ['xlsx', 'xls'] %}
+                <i class="fas fa-file-excel text-primary me-3 fs-1"></i>
+            {% elif dataset.file_type == 'json' %}
+                <i class="fas fa-file-code text-info me-3 fs-1"></i>
+            {% else %}
+                <i class="fas fa-file text-secondary me-3 fs-1"></i>
+            {% endif %}
+            
+            <div>
+                <h1 class="display-6 text-primary mb-0">{{ dataset.name }}</h1>
+                <p class="text-muted mb-0">{{ dataset.filename }}</p>
+            </div>
+        </div>
+        
+        <!-- Badges de statut -->
+        <div class="mb-3">
+            <span class="badge bg-secondary me-2">{{ dataset.file_type.upper() }}</span>
+            {% if dataset.is_cleaned %}
+                <span class="badge bg-success me-2">
+                    <i class="fas fa-check me-1"></i>Nettoyé
+                </span>
+            {% endif %}
+            {% if dataset.is_analyzed %}
+                <span class="badge bg-info me-2">
+                    <i class="fas fa-chart-bar me-1"></i>Analysé
+                </span>
+            {% endif %}
+            {% if dataset.has_duplicates %}
+                <span class="badge bg-warning me-2">
+                    <i class="fas fa-exclamation-triangle me-1"></i>{{ dataset.duplicates_count }} doublons
+                </span>
+            {% endif %}
+            {% if dataset.has_missing_values %}
+                <span class="badge bg-danger me-2">
+                    <i class="fas fa-question-circle me-1"></i>{{ dataset.missing_values_count }} valeurs manquantes
+                </span>
+            {% endif %}
+        </div>
+    </div>
+    
+    <div class="col-md-4 text-end">
+        <div class="btn-group mb-2" role="group">
+            <a href="{{ url_for('main.clean_dataset', dataset_id=dataset.id) }}" 
+               class="btn btn-success">
+                <i class="fas fa-broom me-2"></i>Nettoyer
+            </a>
+            <a href="{{ url_for('main.analyze_dataset', dataset_id=dataset.id) }}" 
+               class="btn btn-info">
+                <i class="fas fa-chart-bar me-2"></i>Analyser
+            </a>
+        </div>
+        
+        <div class="dropdown d-block">
+            <button class="btn btn-outline-secondary dropdown-toggle w-100" type="button" 
+                    data-bs-toggle="dropdown">
+                <i class="fas fa-download me-2"></i>Exporter
+            </button>
+            <ul class="dropdown-menu">
+                <li><a class="dropdown-item" href="{{ url_for('main.export_dataset', dataset_id=dataset.id) }}?format=csv">
+                    <i class="fas fa-file-csv me-2"></i>CSV
+                </a></li>
+                <li><a class="dropdown-item" href="{{ url_for('main.export_dataset', dataset_id=dataset.id) }}?format=excel">
+                    <i class="fas fa-file-excel me-2"></i>Excel
+                </a></li>
+                <li><a class="dropdown-item" href="{{ url_for('main.export_dataset', dataset_id=dataset.id) }}?format=json">
+                    <i class="fas fa-file-code me-2"></i>JSON
+                </a></li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+<!-- Métriques principales -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card text-center bg-primary text-white">
+            <div class="card-body">
+                <i class="fas fa-table fa-2x mb-2"></i>
+                <h4>{{ "{:,}".format(dataset.rows_count) if dataset.rows_count else 'N/A' }}</h4>
+                <p class="mb-0">Lignes</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center bg-success text-white">
+            <div class="card-body">
+                <i class="fas fa-columns fa-2x mb-2"></i>
+                <h4>{{ dataset.columns_count if dataset.columns_count else 'N/A' }}</h4>
+                <p class="mb-0">Colonnes</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center bg-info text-white">
+            <div class="card-body">
+                <i class="fas fa-hdd fa-2x mb-2"></i>
+                <h4>{{ format_file_size_global(dataset.file_size) }}</h4>
+                <p class="mb-0">Taille</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center bg-warning text-white">
+            <div class="card-body">
+                <i class="fas fa-memory fa-2x mb-2"></i>
+                <h4>{{ "%.1f MB"|format(dataset.memory_usage) if dataset.memory_usage else 'N/A' }}</h4>
+                <p class="mb-0">Mémoire</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Score de qualité -->
+{% if basic_stats and basic_stats.data_quality_score is defined %}
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-award me-2"></i>Score de Qualité des Données
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row align-items-center">
+                    <div class="col-md-3 text-center">
+                        <div class="data-quality-score 
+                                   {% if basic_stats.data_quality_score >= 80 %}score-excellent
+                                   {% elif basic_stats.data_quality_score >= 60 %}score-good
+                                   {% else %}score-poor{% endif %}">
+                            {{ "%.0f"|format(basic_stats.data_quality_score) }}%
+                        </div>
+                    </div>
+                    <div class="col-md-9">
+                        <h6>
+                            {% if basic_stats.data_quality_score >= 80 %}
+                                <i class="fas fa-thumbs-up text-success me-2"></i>Excellente qualité
+                            {% elif basic_stats.data_quality_score >= 60 %}
+                                <i class="fas fa-thumbs-up text-info me-2"></i>Bonne qualité
+                            {% else %}
+                                <i class="fas fa-exclamation-triangle text-warning me-2"></i>Qualité à améliorer
+                            {% endif %}
+                        </h6>
+                        <p class="text-muted mb-0">
+                            {% if basic_stats.data_quality_score >= 80 %}
+                                Vos données sont de très bonne qualité et prêtes pour l'analyse.
+                            {% elif basic_stats.data_quality_score >= 60 %}
+                                Vos données sont de bonne qualité avec quelques améliorations possibles.
+                            {% else %}
+                                Vos données nécessitent un nettoyage pour optimiser les analyses.
+                            {% endif %}
+                        </p>
+                        
+                        <!-- Détails des problèmes -->
+                        {% if basic_stats.missing_analysis %}
+                            <div class="row mt-3">
+                                <div class="col-md-4">
+                                    <small class="text-muted">Valeurs manquantes</small>
+                                    <div class="progress" style="height: 8px;">
+                                        <div class="progress-bar bg-danger" 
+                                             style="width: {{ (basic_stats.missing_analysis.total / (dataset.rows_count * dataset.columns_count) * 100)|round(1) if dataset.rows_count and dataset.columns_count else 0 }}%"></div>
+                                    </div>
+                                    <small>{{ basic_stats.missing_analysis.total }} cellules</small>
+                                </div>
+                                <div class="col-md-4">
+                                    <small class="text-muted">Doublons</small>
+                                    <div class="progress" style="height: 8px;">
+                                        <div class="progress-bar bg-warning" 
+                                             style="width: {{ (dataset.duplicates_count / dataset.rows_count * 100)|round(1) if dataset.rows_count else 0 }}%"></div>
+                                    </div>
+                                    <small>{{ dataset.duplicates_count }} lignes</small>
+                                </div>
+                                <div class="col-md-4">
+                                    <small class="text-muted">Complétude</small>
+                                    <div class="progress" style="height: 8px;">
+                                        <div class="progress-bar bg-success" 
+                                             style="width: {{ 100 - (basic_stats.missing_analysis.total / (dataset.rows_count * dataset.columns_count) * 100)|round(1) if dataset.rows_count and dataset.columns_count else 100 }}%"></div>
+                                    </div>
+                                    <small>{{ "%.1f"|format(100 - (basic_stats.missing_analysis.total / (dataset.rows_count * dataset.columns_count) * 100)) if dataset.rows_count and dataset.columns_count else '100.0' }}%</small>
+                                </div>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Informations sur les colonnes -->
+{% if columns_info %}
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">
+                    <i class="fas fa-columns me-2"></i>Structure des Données
+                </h5>
+                <button class="btn btn-sm btn-outline-secondary" type="button" 
+                        data-bs-toggle="collapse" data-bs-target="#columnsInfo">
+                    <i class="fas fa-chevron-down"></i>
+                </button>
+            </div>
+            <div class="collapse show" id="columnsInfo">
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Colonne</th>
+                                    <th>Type</th>
+                                    <th>Non-null</th>
+                                    <th>Valeurs uniques</th>
+                                    <th>Échantillon</th>
+                                    <th>Qualité</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for col in columns_info %}
+                                <tr>
+                                    <td>
+                                        <strong>{{ col.name }}</strong>
+                                        {% if col.null_count > 0 %}
+                                            <br><small class="text-danger">
+                                                <i class="fas fa-exclamation-triangle me-1"></i>
+                                                {{ col.null_count }} manquantes
+                                            </small>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-secondary">{{ col.type }}</span>
+                                    </td>
+                                    <td>
+                                        {{ "{:,}".format(col.non_null_count) }}
+                                        <br><small class="text-muted">
+                                            {{ "%.1f"|format((col.non_null_count / dataset.rows_count * 100) if dataset.rows_count else 0) }}%
+                                        </small>
+                                    </td>
+                                    <td>
+                                        {{ "{:,}".format(col.unique_count) }}
+                                        {% if col.unique_count == dataset.rows_count %}
+                                            <br><small class="text-info">
+                                                <i class="fas fa-key me-1"></i>Unique
+                                            </small>
+                                        {% elif col.unique_count <= 10 %}
+                                            <br><small class="text-warning">
+                                                <i class="fas fa-tags me-1"></i>Catégoriel
+                                            </small>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% for value in col.sample_values[:3] %}
+                                            <span class="badge bg-light text-dark me-1">{{ value[:20] }}{% if value|length > 20 %}...{% endif %}</span>
+                                        {% endfor %}
+                                    </td>
+                                    <td>
+                                        {% set completeness = (col.non_null_count / dataset.rows_count * 100) if dataset.rows_count else 100 %}
+                                        <div class="progress" style="width: 60px; height: 8px;">
+                                            <div class="progress-bar 
+                                                       {% if completeness >= 95 %}bg-success
+                                                       {% elif completeness >= 80 %}bg-info
+                                                       {% elif completeness >= 60 %}bg-warning
+                                                       {% else %}bg-danger{% endif %}" 
+                                                 style="width: {{ completeness }}%"></div>
+                                        </div>
+                                        <small>{{ "%.0f"|format(completeness) }}%</small>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Aperçu des données -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">
+                    <i class="fas fa-eye me-2"></i>Aperçu des Données
+                </h5>
+                <div>
+                    <button class="btn btn-sm btn-outline-secondary me-2" onclick="refreshPreview()">
+                        <i class="fas fa-sync-alt"></i>
+                    </button>
+                    <select class="form-select form-select-sm d-inline-block w-auto" id="previewRows" onchange="updatePreviewRows()">
+                        <option value="10">10 lignes</option>
+                        <option value="25" selected>25 lignes</option>
+                        <option value="50">50 lignes</option>
+                        <option value="100">100 lignes</option>
+                    </select>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive" id="dataPreview">
+                    {% if sample_data %}
+                        <table class="table table-sm table-striped">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th class="text-center">#</th>
+                                    {% for key in sample_data[0].keys() %}
+                                        <th>{{ key }}</th>
+                                    {% endfor %}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for row in sample_data %}
+                                <tr>
+                                    <td class="text-center text-muted">{{ loop.index }}</td>
+                                    {% for key, value in row.items() %}
+                                        <td>
+                                            {% if value is none %}
+                                                <span class="text-danger">
+                                                    <i class="fas fa-question-circle"></i> null
+                                                </span>
+                                            {% elif value == '' %}
+                                                <span class="text-warning">
+                                                    <i class="fas fa-minus"></i> vide
+                                                </span>
+                                            {% else %}
+                                                {{ value|string|slice(50) }}{% if value|string|length > 50 %}...{% endif %}
+                                            {% endif %}
+                                        </td>
+                                    {% endfor %}
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    {% else %}
+                        <div class="text-center py-4">
+                            <i class="fas fa-exclamation-triangle fa-3x text-warning mb-3"></i>
+                            <h5>Impossible de charger l'aperçu</h5>
+                            <p class="text-muted">Le fichier est peut-être corrompu ou dans un format non supporté.</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Historique et métadonnées -->
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-info-circle me-2"></i>Métadonnées
+                </h5>
+            </div>
+            <div class="card-body">
+                <dl class="row">
+                    <dt class="col-sm-5">Nom du fichier:</dt>
+                    <dd class="col-sm-7">{{ dataset.filename }}</dd>
+                    
+                    <dt class="col-sm-5">Type MIME:</dt>
+                    <dd class="col-sm-7">
+                        {% if dataset.file_type == 'csv' %}text/csv
+                        {% elif dataset.file_type == 'xlsx' %}application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
+                        {% elif dataset.file_type == 'xls' %}application/vnd.ms-excel
+                        {% elif dataset.file_type == 'json' %}application/json
+                        {% elif dataset.file_type == 'tsv' %}text/tab-separated-values
+                        {% else %}{{ dataset.file_type }}
+                        {% endif %}
+                    </dd>
+                    
+                    <dt class="col-sm-5">Encodage:</dt>
+                    <dd class="col-sm-7">{{ dataset.encoding or 'UTF-8' }}</dd>
+                    
+                    <dt class="col-sm-5">Date d'upload:</dt>
+                    <dd class="col-sm-7">{{ format_datetime_global(dataset.upload_date) }}</dd>
+                    
+                    {% if dataset.last_modified %}
+                    <dt class="col-sm-5">Dernière modification:</dt>
+                    <dd class="col-sm-7">{{ format_datetime_global(dataset.last_modified) }}</dd>
+                    {% endif %}
+                    
+                    {% if dataset.last_cleaned %}
+                    <dt class="col-sm-5">Dernier nettoyage:</dt>
+                    <dd class="col-sm-7">{{ format_datetime_global(dataset.last_cleaned) }}</dd>
+                    {% endif %}
+                    
+                    {% if dataset.last_analyzed %}
+                    <dt class="col-sm-5">Dernière analyse:</dt>
+                    <dd class="col-sm-7">{{ format_datetime_global(dataset.last_analyzed) }}</dd>
+                    {% endif %}
+                </dl>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-history me-2"></i>Actions Rapides
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    {% if not dataset.is_cleaned %}
+                        <a href="{{ url_for('main.clean_dataset', dataset_id=dataset.id) }}" 
+                           class="btn btn-success">
+                            <i class="fas fa-broom me-2"></i>
+                            Nettoyer les données
+                        </a>
+                    {% endif %}
+                    
+                    {% if dataset.is_cleaned and not dataset.is_analyzed %}
+                        <a href="{{ url_for('main.analyze_dataset', dataset_id=dataset.id) }}" 
+                           class="btn btn-info">
+                            <i class="fas fa-chart-bar me-2"></i>
+                            Analyser les données
+                        </a>
+                    {% endif %}
+                    
+                    <button class="btn btn-outline-primary" onclick="generateReport()">
+                        <i class="fas fa-file-pdf me-2"></i>
+                        Générer un rapport
+                    </button>
+                    
+                    <button class="btn btn-outline-secondary" onclick="shareDataset()">
+                        <i class="fas fa-share-alt me-2"></i>
+                        Partager le dataset
+                    </button>
+                    
+                    <button class="btn btn-outline-warning" onclick="duplicateDataset()">
+                        <i class="fas fa-copy me-2"></i>
+                        Dupliquer
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Recommandations IA -->
+<div class="row">
+    <div class="col-12">
+        <div class="card border-info">
+            <div class="card-header bg-info text-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-robot me-2"></i>Recommandations IA
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    {% if not dataset.is_cleaned %}
+                    <div class="col-md-6 mb-3">
+                        <div class="alert alert-warning border-0">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            <strong>Nettoyage recommandé:</strong>
+                            {% if dataset.has_duplicates %}
+                                {{ dataset.duplicates_count }} doublons détectés.
+                            {% endif %}
+                            {% if dataset.has_missing_values %}
+                                {{ dataset.missing_values_count }} valeurs manquantes trouvées.
+                            {% endif %}
+                            <a href="{{ url_for('main.clean_dataset', dataset_id=dataset.id) }}" 
+                               class="btn btn-sm btn-warning mt-2">
+                                Lancer le nettoyage
+                            </a>
+                        </div>
+                    </div>
+                    {% endif %}
+                    
+                    {% if dataset.is_cleaned and not dataset.is_analyzed %}
+                    <div class="col-md-6 mb-3">
+                        <div class="alert alert-info border-0">
+                            <i class="fas fa-chart-line me-2"></i>
+                            <strong>Analyse possible:</strong>
+                            Vos données sont prêtes pour une analyse statistique ou de machine learning.
+                            <a href="{{ url_for('main.analyze_dataset', dataset_id=dataset.id) }}" 
+                               class="btn btn-sm btn-info mt-2">
+                                Commencer l'analyse
+                            </a>
+                        </div>
+                    </div>
+                    {% endif %}
+                    
+                    {% if columns_info %}
+                        {% set categorical_cols = columns_info | selectattr('unique_count', 'le', 10) | list %}
+                        {% if categorical_cols %}
+                        <div class="col-md-6 mb-3">
+                            <div class="alert alert-success border-0">
+                                <i class="fas fa-tags me-2"></i>
+                                <strong>Variables catégorielles détectées:</strong>
+                                Parfait pour une analyse de classification ou de clustering.
+                                <small class="d-block mt-1">
+                                    Colonnes: {{ categorical_cols | map(attribute='name') | list | join(', ') }}
+                                </small>
+                            </div>
+                        </div>
+                        {% endif %}
+                        
+                        {% set unique_cols = columns_info | selectattr('unique_count', 'eq', dataset.rows_count) | list %}
+                        {% if unique_cols %}
+                        <div class="col-md-6 mb-3">
+                            <div class="alert alert-primary border-0">
+                                <i class="fas fa-key me-2"></i>
+                                <strong>Identifiants uniques:</strong>
+                                Ces colonnes peuvent servir d'index ou de clés primaires.
+                                <small class="d-block mt-1">
+                                    Colonnes: {{ unique_cols | map(attribute='name') | list | join(', ') }}
+                                </small>
+                            </div>
+                        </div>
+                        {% endif %}
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function refreshPreview() {
+    const btn = event.target.closest('button');
+    const originalContent = btn.innerHTML;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+    btn.disabled = true;
+    
+    // Simuler le rechargement
+    setTimeout(() => {
+        location.reload();
+    }, 1000);
+}
+
+function updatePreviewRows() {
+    const rows = document.getElementById('previewRows').value;
+    // Ici, vous pourriez faire un appel AJAX pour charger plus de lignes
+    console.log('Updating preview to show', rows, 'rows');
+}
+
+function generateReport() {
+    const btn = event.target;
+    const originalContent = btn.innerHTML;
+    btn.innerHTML = '<span class="loading-spinner me-2"></span>Génération...';
+    btn.disabled = true;
+    
+    // Simulation de génération de rapport
+    setTimeout(() => {
+        btn.innerHTML = '<i class="fas fa-check me-2"></i>Rapport généré';
+        btn.classList.replace('btn-outline-primary', 'btn-success');
+        
+        setTimeout(() => {
+            btn.innerHTML = originalContent;
+            btn.classList.replace('btn-success', 'btn-outline-primary');
+            btn.disabled = false;
+        }, 3000);
+    }, 2000);
+}
+
+function shareDataset() {
+    const modal = document.createElement('div');
+    modal.className = 'modal fade';
+    modal.innerHTML = `
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Partager le Dataset</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Lien de partage</label>
+                        <div class="input-group">
+                            <input type="text" class="form-control" value="${window.location.href}" readonly>
+                            <button class="btn btn-outline-secondary" onclick="copyToClipboard(this.previousElementSibling.value)">
+                                <i class="fas fa-copy"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Email</label>
+                        <input type="email" class="form-control" placeholder="Entrez l'email du destinataire">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                    <button type="button" class="btn btn-primary">Partager</button>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+    const bsModal = new bootstrap.Modal(modal);
+    bsModal.show();
+    
+    modal.addEventListener('hidden.bs.modal', () => {
+        document.body.removeChild(modal);
+    });
+}
+
+function duplicateDataset() {
+    if (confirm('Voulez-vous créer une copie de ce dataset ?')) {
+        // Ici, vous feriez un appel AJAX pour dupliquer
+        alert('Fonctionnalité à implémenter');
+    }
+}
+
+function copyToClipboard(text) {
+    navigator.clipboard.writeText(text).then(() => {
+        const btn = event.target.closest('button');
+        const originalContent = btn.innerHTML;
+        btn.innerHTML = '<i class="fas fa-check"></i>';
+        btn.classList.replace('btn-outline-secondary', 'btn-success');
+        
+        setTimeout(() => {
+            btn.innerHTML = originalContent;
+            btn.classList.replace('btn-success', 'btn-outline-secondary');
+        }, 2000);
+    });
+}
+
+// Animation des cartes au chargement
+document.addEventListener('DOMContentLoaded', function() {
+    const cards = document.querySelectorAll('.card');
+    cards.forEach((card, index) => {
+        card.style.opacity = '0';
+        card.style.transform = 'translateY(20px)';
+        
+        setTimeout(() => {
+            card.style.transition = 'all 0.5s ease';
+            card.style.opacity = '1';
+            card.style.transform = 'translateY(0)';
+        }, index * 100);
+    });
+});
+</script>
+{% endblock %}
