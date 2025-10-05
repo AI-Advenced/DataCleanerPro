@@ -120,7 +120,7 @@ webapp/
 
 ```bash
 # Clone the repository
-git clone https://github.com/your-username/datacleaner-pro.git
+git clone https://github.com/AI-Advenced/DataCleanerPro/datacleanerpro.git
 cd datacleaner-pro
 
 # Create a virtual environment
